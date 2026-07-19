@@ -290,7 +290,40 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
     }
 
     .history-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
       margin-bottom: 22px;
+    }
+
+    .history-average {
+      display: grid;
+      justify-items: end;
+      gap: 5px;
+    }
+
+    .history-average[hidden] {
+      display: none;
+    }
+
+    .history-average-label {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .history-average-result {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .history-average-value {
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
 
     .history-list {
@@ -460,9 +493,19 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
         line-height: 1.25;
       }
 
-      .actions {
+      .actions,
+      .history-header {
         align-items: stretch;
         flex-direction: column;
+      }
+
+      .history-average {
+        justify-items: start;
+      }
+
+      .history-average-result {
+        justify-content: flex-start;
+        flex-wrap: wrap;
       }
 
       .primary-button {
@@ -544,6 +587,13 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
     <section class="card" aria-labelledby="history-title">
       <header class="history-header">
         <h2 id="history-title">История</h2>
+        <div class="history-average" id="history-average" aria-live="polite" hidden>
+          <p class="history-average-label">Среднее за 7 дней</p>
+          <div class="history-average-result">
+            <strong class="history-average-value" id="history-average-value"></strong>
+            <span class="badge" id="history-average-badge"></span>
+          </div>
+        </div>
       </header>
       <div class="history-list" id="history-list"></div>
     </section>
@@ -571,6 +621,9 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
     const saveButton = document.querySelector("#save-button");
     const feedback = document.querySelector("#feedback");
     const historyList = document.querySelector("#history-list");
+    const historyAverage = document.querySelector("#history-average");
+    const historyAverageValue = document.querySelector("#history-average-value");
+    const historyAverageBadge = document.querySelector("#history-average-badge");
 
     const state = {
       records: [],
@@ -656,10 +709,12 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
     }
 
     function renderHistoryLoading() {
+      historyAverage.hidden = true;
       historyList.innerHTML = '<p class="empty-history">Загружаем историю…</p>';
     }
 
     function renderHistoryError() {
+      historyAverage.hidden = true;
       historyList.innerHTML = `
         <div class="empty-history">
           <p>Не удалось загрузить историю.</p>
@@ -802,8 +857,68 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
         .replaceAll("'", "&#039;");
     }
 
+    function describeRange(totalCalories, targetMin, targetMax) {
+      const isBelowRange = totalCalories < targetMin;
+      const isInRange = !isBelowRange && totalCalories <= targetMax;
+
+      if (isInRange) {
+        return {
+          isBelowRange,
+          isInRange,
+          badgeText: "В норме"
+        };
+      }
+
+      const boundary = isBelowRange ? targetMin : targetMax;
+      const deviationCalories = isBelowRange
+        ? targetMin - totalCalories
+        : totalCalories - targetMax;
+      const deviationPercent = boundary > 0
+        ? ` (${formatCalories(deviationCalories / boundary * 100)}%)`
+        : "";
+
+      return {
+        isBelowRange,
+        isInRange,
+        badgeText: `${isBelowRange ? "Ниже" : "Выше"} нормы на ${formatCalories(deviationCalories)} ккал${deviationPercent}`
+      };
+    }
+
+    function renderHistoryAverage(records) {
+      if (!records.length) {
+        historyAverage.hidden = true;
+        return;
+      }
+
+      const latestDate = records[0].date;
+      const firstDate = new Date(`${latestDate}T12:00:00`);
+      firstDate.setDate(firstDate.getDate() - 6);
+      const firstDateISO = toLocalISODate(firstDate);
+      const recentRecords = records.filter((record) =>
+        record.date >= firstDateISO && record.date <= latestDate
+      );
+      const averages = recentRecords.reduce((result, record) => {
+        const values = calculateValues(record.dryAmount, record.wetAmount, profileFromRecord(record));
+        result.totalCalories += values.totalCalories;
+        result.targetMin += record.targetMin;
+        result.targetMax += record.targetMax;
+        return result;
+      }, { totalCalories: 0, targetMin: 0, targetMax: 0 });
+      const recordCount = recentRecords.length;
+      const averageCalories = averages.totalCalories / recordCount;
+      const averageMin = averages.targetMin / recordCount;
+      const averageMax = averages.targetMax / recordCount;
+      const range = describeRange(averageCalories, averageMin, averageMax);
+
+      historyAverageValue.textContent = `${formatCalories(averageCalories)} ккал`;
+      historyAverageBadge.textContent = range.badgeText;
+      historyAverageBadge.className = `badge ${range.isInRange ? "good" : "warning"}`;
+      historyAverage.hidden = false;
+    }
+
     function renderHistory() {
       const records = [...state.records].sort((a, b) => b.date.localeCompare(a.date));
+      renderHistoryAverage(records);
 
       if (!records.length) {
         historyList.innerHTML = `<p class="empty-history">${IS_ADMIN
@@ -814,29 +929,19 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
 
       historyList.innerHTML = records.map((record) => {
         const values = calculateValues(record.dryAmount, record.wetAmount, profileFromRecord(record));
-        const isBelowRange = values.totalCalories < record.targetMin;
-        const comparison = values.isInRange
+        const range = describeRange(values.totalCalories, record.targetMin, record.targetMax);
+        const comparison = range.isInRange
           ? ""
-          : isBelowRange
+          : range.isBelowRange
             ? `&lt; ${formatCompact(record.targetMin)} ккал`
             : `&gt; ${formatCompact(record.targetMax)} ккал`;
-        const deviationCalories = isBelowRange
-          ? record.targetMin - values.totalCalories
-          : values.totalCalories - record.targetMax;
-        const comparisonBoundary = isBelowRange ? record.targetMin : record.targetMax;
-        const deviationPercent = comparisonBoundary > 0
-          ? ` (${formatCalories(deviationCalories / comparisonBoundary * 100)}%)`
-          : "";
-        const badgeText = values.isInRange
-          ? "В норме"
-          : `${isBelowRange ? "Ниже" : "Выше"} нормы на ${formatCalories(deviationCalories)} ккал${deviationPercent}`;
 
         return `
           <details class="history-item">
             <summary class="history-summary">
               <span class="history-date"><time datetime="${record.date}">${formatDate(record.date)}</time></span>
               <span class="history-summary-total">${formatCalories(values.totalCalories)} ккал</span>
-              <span class="badge ${values.isInRange ? "good" : "warning"}">${badgeText}</span>
+              <span class="badge ${range.isInRange ? "good" : "warning"}">${range.badgeText}</span>
             </summary>
             <div class="history-expanded">
               <p class="history-total">

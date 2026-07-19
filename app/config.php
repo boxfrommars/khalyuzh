@@ -10,7 +10,7 @@ return [
         'dryCaloriesPerGram' => 4.421,
         'wetName' => 'Farmina VetLife Renal Wet',
         'wetCaloriesPerCan' => 102.2,
-        'targetMin' => 275,
+        'targetMin' => 255,
         'targetMax' => 330,
     ],
 ];

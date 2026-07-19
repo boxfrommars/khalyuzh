@@ -290,18 +290,7 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
     }
 
     .history-header {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 20px;
       margin-bottom: 22px;
-    }
-
-    .history-count {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.88rem;
-      white-space: nowrap;
     }
 
     .history-list {
@@ -335,7 +324,7 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
 
     .history-summary {
       display: grid;
-      grid-template-columns: 14px minmax(0, 1fr) auto auto;
+      grid-template-columns: 14px auto auto minmax(0, 1fr);
       align-items: center;
       gap: 10px;
       padding: 17px;
@@ -361,6 +350,7 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
     }
 
     .history-summary-total {
+      justify-self: start;
       font-size: 0.9rem;
       font-weight: 750;
       font-variant-numeric: tabular-nums;
@@ -378,7 +368,7 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
 
     .history-date {
       margin: 0;
-      font-weight: 750;
+      font-weight: 400;
     }
 
     .history-total {
@@ -396,6 +386,7 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
     }
 
     .badge {
+      justify-self: end;
       padding: 5px 9px;
       border-radius: 999px;
       font-size: 0.76rem;
@@ -457,7 +448,7 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
       }
 
       .history-summary {
-        grid-template-columns: 14px minmax(0, 1fr) auto;
+        grid-template-columns: 14px auto minmax(0, 1fr);
         gap: 8px;
       }
 
@@ -469,18 +460,13 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
         line-height: 1.25;
       }
 
-      .actions,
-      .history-header {
+      .actions {
         align-items: stretch;
         flex-direction: column;
       }
 
       .primary-button {
         width: 100%;
-      }
-
-      .history-count {
-        align-self: flex-start;
       }
     }
 
@@ -557,10 +543,7 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
 
     <section class="card" aria-labelledby="history-title">
       <header class="history-header">
-        <div>
-          <h2 id="history-title">История</h2>
-        </div>
-        <p class="history-count" id="history-count"></p>
+        <h2 id="history-title">История</h2>
       </header>
       <div class="history-list" id="history-list"></div>
     </section>
@@ -588,7 +571,6 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
     const saveButton = document.querySelector("#save-button");
     const feedback = document.querySelector("#feedback");
     const historyList = document.querySelector("#history-list");
-    const historyCount = document.querySelector("#history-count");
 
     const state = {
       records: [],
@@ -643,15 +625,6 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
       return "банок";
     }
 
-    function dayUnit(value) {
-      const lastTwoDigits = value % 100;
-      const lastDigit = lastTwoDigits % 10;
-      if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return "дней";
-      if (lastDigit === 1) return "день";
-      if (lastDigit >= 2 && lastDigit <= 4) return "дня";
-      return "дней";
-    }
-
     function numberFrom(input) {
       return Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : 0;
     }
@@ -683,12 +656,10 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
     }
 
     function renderHistoryLoading() {
-      historyCount.textContent = "Загрузка…";
       historyList.innerHTML = '<p class="empty-history">Загружаем историю…</p>';
     }
 
     function renderHistoryError() {
-      historyCount.textContent = "Недоступна";
       historyList.innerHTML = `
         <div class="empty-history">
           <p>Не удалось загрузить историю.</p>
@@ -833,9 +804,6 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
 
     function renderHistory() {
       const records = [...state.records].sort((a, b) => b.date.localeCompare(a.date));
-      historyCount.textContent = records.length
-        ? `${records.length} ${dayUnit(records.length)}`
-        : "Пока пусто";
 
       if (!records.length) {
         historyList.innerHTML = `<p class="empty-history">${IS_ADMIN

@@ -301,6 +301,7 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
       display: grid;
       justify-items: end;
       gap: 5px;
+      margin-right: 18px;
     }
 
     .history-average[hidden] {
@@ -501,6 +502,7 @@ $apiUrl = $isAdmin ? '/admin/api.php' : '/api.php';
 
       .history-average {
         justify-items: start;
+        margin-right: 0;
       }
 
       .history-average-result {

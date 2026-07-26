@@ -1,0 +1,40 @@
+{
+    "name": "boxfrommars/khalyuzh",
+    "description": "Дневник рациона и веса Халюжа",
+    "license": "proprietary",
+    "type": "project",
+    "require": {
+        "php": "^8.3",
+        "symfony/clock": "^7.4",
+        "symfony/http-foundation": "^7.4",
+        "twig/twig": "^3.0"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.2",
+        "phpunit/phpunit": "^12.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Khalyuzh\\": "app/src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Khalyuzh\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse --memory-limit=256M",
+        "check": [
+            "@test",
+            "@analyse"
+        ]
+    },
+    "config": {
+        "platform": {
+            "php": "8.3.0"
+        },
+        "sort-packages": true
+    }
+}

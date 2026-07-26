@@ -1,0 +1,8 @@
+parameters:
+    level: 8
+    paths:
+        - app/src
+        - bin/migrate.php
+        - bin/router.php
+        - public
+    tmpDir: storage/cache/phpstan

@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Khalyuzh;
+
+use JsonException;
+use Symfony\Component\HttpFoundation\Response;
+use Twig\Environment;
+
+final readonly class PageController
+{
+    /**
+     * @param array<string, float|int|string> $profile
+     */
+    public function __construct(
+        private Environment $twig,
+        private array $profile,
+    ) {
+    }
+
+    /**
+     * @throws JsonException
+     */
+    public function food(bool $isAdmin): Response
+    {
+        return new Response($this->twig->render('food.html.twig', [
+            'is_admin' => $isAdmin,
+            'active_section' => 'food',
+            'page_config' => $this->pageConfig([
+                'isAdmin' => $isAdmin,
+                'apiUrl' => $isAdmin ? '/admin/api.php' : '/api.php',
+                'profile' => $this->profile,
+            ]),
+        ]));
+    }
+
+    /**
+     * @throws JsonException
+     */
+    public function weight(bool $isAdmin): Response
+    {
+        return new Response($this->twig->render('weight.html.twig', [
+            'is_admin' => $isAdmin,
+            'active_section' => 'weight',
+            'page_config' => $this->pageConfig([
+                'isAdmin' => $isAdmin,
+                'apiUrl' => $isAdmin ? '/admin/weight/api.php' : '/weight/api.php',
+            ]),
+        ]));
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     *
+     * @throws JsonException
+     */
+    private function pageConfig(array $config): string
+    {
+        return json_encode(
+            $config,
+            JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_SLASHES
+            | JSON_THROW_ON_ERROR
+            | JSON_HEX_TAG,
+        );
+    }
+}

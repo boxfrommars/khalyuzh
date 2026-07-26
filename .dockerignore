@@ -1,3 +1,7 @@
 .git
-storage/*.sqlite
+AGENTS.md
+.phpunit.cache
+storage/*.sqlite*
 storage/backups/
+storage/cache/
+vendor/

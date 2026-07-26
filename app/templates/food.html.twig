@@ -1,0 +1,81 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Рацион Халюжа{% endblock %}
+{% block description %}Дневник калорий для рациона Халюжа{% endblock %}
+
+{% block content %}
+  <section class="card" aria-labelledby="page-title">
+    <header class="page-header">
+      <h1 id="page-title">Халюж, как успехи?</h1>
+      <p class="subtitle">{{ is_admin
+        ? 'Запишите рацион за день — данные сохранятся на сервере.'
+        : 'Посчитайте рацион и посмотрите историю Халюжа.' }}</p>
+    </header>
+
+    <form id="food-form" autocomplete="off" novalidate>
+      <div class="field">
+        <label for="entry-date">Дата рациона</label>
+        <div class="input-wrap">
+          <input id="entry-date" name="entryDate" type="date" required>
+        </div>
+        <p class="hint">По умолчанию выбрана вчерашняя дата</p>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="dry-food">Сухой корм</label>
+          <div class="input-wrap">
+            <input id="dry-food" name="dryFood" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
+            <span class="unit" aria-hidden="true">г</span>
+          </div>
+          <p class="hint" id="dry-hint"></p>
+        </div>
+
+        <div class="field">
+          <label for="wet-food">Влажный корм</label>
+          <div class="input-wrap">
+            <input id="wet-food" name="wetFood" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
+            <span class="unit" aria-hidden="true">банки</span>
+          </div>
+          <p class="hint" id="wet-hint"></p>
+        </div>
+      </div>
+
+      <section class="result" id="result" aria-live="polite" aria-atomic="true">
+        <p class="result-label">Итого</p>
+        <p class="total" id="total">
+          <span id="total-value">—</span> <span class="comparison" id="comparison"></span>
+        </p>
+        <p class="status" id="status">Введите количество корма</p>
+        <p class="breakdown" id="breakdown" hidden></p>
+      </section>
+
+      <p class="range-note" id="range-note"></p>
+
+      {% if is_admin %}
+        <div class="actions">
+          <button class="primary-button" id="save-button" type="submit">Сохранить день</button>
+          <p class="feedback" id="feedback" role="status"></p>
+        </div>
+      {% endif %}
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="history-title">
+    <header class="history-header">
+      <h2 id="history-title">История</h2>
+      <div class="history-average" id="history-average" aria-live="polite" hidden>
+        <p class="history-average-label">Среднее за 7 дней</p>
+        <div class="history-average-result">
+          <strong class="history-average-value" id="history-average-value"></strong>
+          <span class="badge" id="history-average-badge"></span>
+        </div>
+      </div>
+    </header>
+    <div class="history-list" id="history-list"></div>
+  </section>
+{% endblock %}
+
+{% block script %}
+  <script type="module" src="/assets/food.js"></script>
+{% endblock %}

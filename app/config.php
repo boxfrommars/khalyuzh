@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'databasePath' => dirname(__DIR__) . '/storage/records.sqlite',
+    'timezone' => 'Asia/Yerevan',
     'profile' => [
         'catWeight' => 5.5,
         'dryName' => 'Farmina VetLife Renal Dry',

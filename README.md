@@ -1,43 +1,74 @@
-# Рацион Халюжа
+# Дневник Халюжа
 
-Небольшой сайт на PHP 8.3 и SQLite без фреймворков, Composer и сборки.
+Небольшой сайт для учёта рациона и веса Халюжа. Приложение работает на
+PHP 8.3 и SQLite, использует Twig, Symfony HttpFoundation и Symfony Clock.
+Frontend-сборки и полноценного PHP-фреймворка нет.
+
+## Разделы
+
+- `/` — публичный калькулятор рациона и история кормления;
+- `/weight/` — публичное последнее взвешивание, среднее за 7 дней и история;
+- `/admin/` — управление рационом;
+- `/admin/weight/` — управление взвешиваниями.
+
+Публичные страницы доступны без авторизации. Все административные страницы и
+API в production защищаются HTTP Basic Authentication на уровне веб-сервера.
 
 ## Структура
 
+- `public/index.php` — единственный HTTP front controller;
 - `public/` — единственный публичный document root;
-- `app/` — конфигурация, подключение к SQLite и API;
-- `storage/` — база данных и локальные резервные копии;
-- `public/admin/` — административные точки входа, которые должен защищать веб-сервер.
+- `public/assets/` — CSS и ES-модули без frontend-сборки;
+- `app/src/` — семь классов в namespace `Khalyuzh`: composition root,
+  HTTP application, два controller, Database и два repository;
+- `app/templates/` — Twig-layout и страницы;
+- `app/config.php` — путь к БД, часовой пояс и параметры рациона;
+- `storage/` — SQLite-база и локальные резервные копии;
+- `bin/migrate.php` — версионированные миграции;
+- `bin/backup.sh` — согласованные SQLite backup-копии;
+- `tests/` — PHPUnit-тесты на in-memory SQLite.
 
-Профиль Халюжа, названия кормов, калорийность и диапазон нормы находятся в `app/config.php`.
-
-## Требования
-
-- PHP 8.3 с расширениями `PDO` и `pdo_sqlite`;
-- веб-пользователь PHP-FPM должен иметь право записи в `storage/`;
-- `sqlite3` CLI нужен только для резервных копий.
+Записи веса не меняют параметры рациона. Профиль из `app/config.php`
+по-прежнему копируется в каждую новую запись кормления, поэтому история
+сохраняет исходные параметры.
 
 ## Локальный запуск
 
-Через Docker:
+Требуется запущенный Docker Desktop:
 
 ```sh
 docker compose up --build
 ```
 
-Сайт будет доступен по `http://127.0.0.1:8088/`, административная страница — по `http://127.0.0.1:8088/admin/`.
+Сайт доступен по `http://127.0.0.1:8088/`, раздел веса — по `/weight/`,
+административные страницы — по `/admin/` и `/admin/weight/`.
 
-Или через установленный локально PHP:
+При старте development-контейнер применяет миграции к локальной базе и запускает
+встроенный PHP-сервер через `bin/router.php`. Router отдаёт напрямую только
+четыре разрешённых asset-файла, а все HTTP-маршруты передаёт единому front
+controller. Admin разрешён без пароля только при `PHP_SAPI=cli-server`; это
+исключение нельзя использовать в production.
+
+## Проверки
 
 ```sh
-php -S 127.0.0.1:8000 -t public
+docker compose run --rm app composer validate --strict
+docker compose run --rm app composer check
+docker compose run --rm app sh -c \
+  "find app public bin tests -type f -name '*.php' -exec php -l {} \; && \
+   php -r 'exit(extension_loaded(\"PDO\") && extension_loaded(\"pdo_sqlite\") ? 0 : 1);' && \
+   sh -n bin/backup.sh && sh -n bin/start-dev.sh"
 ```
 
-При локальном запуске PHP публичная страница будет доступна по `http://127.0.0.1:8000/`, административная — по `/admin/`. Встроенный PHP-сервер разрешает административный режим без пароля только для локальной разработки; использовать его в production нельзя.
+`composer check` запускает PHPUnit и PHPStan level 8. Тесты создают только
+in-memory SQLite и не обращаются к `storage/records.sqlite`.
 
 ## API
 
-- `GET /api.php` — публичное чтение истории;
+Рацион:
+
+- `GET /api.php` — публичная история;
+- `GET /admin/api.php` — история для admin;
 - `PUT /admin/api.php?date=YYYY-MM-DD` — создание или обновление;
 - `DELETE /admin/api.php?date=YYYY-MM-DD` — удаление.
 
@@ -50,29 +81,53 @@ php -S 127.0.0.1:8000 -t public
 }
 ```
 
-## Nginx
+Вес:
 
-Шаблон находится в `deploy/nginx.example.conf`. Перед включением нужно заменить домен, пути проекта и TLS-сертификата, проверить сокет PHP-FPM и создать файл паролей:
+- `GET /weight/api.php` — публичная история;
+- `GET /admin/weight/api.php` — история для admin;
+- `PUT /admin/weight/api.php?date=YYYY-MM-DD` — создание или обновление;
+- `DELETE /admin/weight/api.php?date=YYYY-MM-DD` — удаление.
 
-```sh
-sudo htpasswd -c /etc/nginx/.htpasswd-khalyuzh USERNAME
-sudo nginx -t
-sudo systemctl reload nginx
+Тело `PUT`:
+
+```json
+{
+  "weightKg": 5.48
+}
 ```
 
-После настройки домена сайт должен работать только через HTTPS. Nginx передаёт имя аутентифицированного пользователя в PHP; административные точки входа дополнительно отклонят запрос, если веб-сервер не подтвердил авторизацию.
+Для каждой даты хранится не более одной записи веса. Будущие даты и
+неположительные значения отклоняются.
 
-## Резервные копии
+## Миграции и backup
+
+Новая или существующая база подготавливается командой:
 
 ```sh
-chmod +x bin/backup.sh
+php bin/migrate.php
+```
+
+Перед миграцией постоянной базы обязательна согласованная backup-копия:
+
+```sh
 ./bin/backup.sh
 ```
 
-Скрипт использует безопасную команду SQLite `.backup` и хранит последние 30 копий. Пример ежедневного cron-задания:
+Backup использует SQLite `.backup`, содержит обе предметные таблицы и хранит
+последние 30 файлов. Обычное копирование открытой SQLite-базы не заменяет этот
+механизм.
 
-```cron
-15 3 * * * /var/www/khalyuzh/bin/backup.sh >/dev/null
+## Production
+
+Production-зависимости устанавливаются воспроизводимо:
+
+```sh
+composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 ```
 
-База создаётся автоматически при первом запросе. Данные из прежнего `localStorage` намеренно не импортируются.
+`public/` должен оставаться единственным document root. Nginx должен исполнять
+только `public/index.php`, отдавать напрямую только известные assets и защищать
+весь `/admin/` через HTTP Basic Authentication. Пример конфигурации находится
+в `deploy/nginx.example.conf`. Полный
+deployment-контракт, порядок миграции и rollback описаны в `DEPLOYMENT.md`;
+фактические production-runbooks находятся в отдельном инфраструктурном проекте.

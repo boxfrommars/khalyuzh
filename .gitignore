@@ -1,4 +1,5 @@
 /.agents/
+/AGENTS.md
 /site-deploy.md
 /storage/*.sqlite*
 /storage/backups/

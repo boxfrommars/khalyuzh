@@ -4,6 +4,15 @@
 PHP 8.3 и SQLite, использует Twig, Symfony HttpFoundation и Symfony Clock.
 Frontend-сборки и полноценного PHP-фреймворка нет.
 
+## Роли документов
+
+- `README.md` — описание приложения и инструкция для разработчика;
+- `DEPLOYMENT.md` — декларативные требования приложения к развёртыванию;
+- `AGENTS.md` — постоянные правила работы агентов с репозиторием;
+- production-инфраструктура, выполнение deploy и серверные runbooks находятся
+  за пределами ответственности этого репозитория и поддерживаются отдельно для
+  конкретного окружения.
+
 ## Разделы
 
 - `/` — публичный калькулятор рациона и история кормления;
@@ -19,8 +28,8 @@ API в production защищаются HTTP Basic Authentication на уровн
 - `public/index.php` — единственный HTTP front controller;
 - `public/` — единственный публичный document root;
 - `public/assets/` — CSS и ES-модули без frontend-сборки;
-- `app/src/` — семь классов в namespace `Khalyuzh`: composition root,
-  HTTP application, два controller, Database и два repository;
+- `app/src/` — классы приложения в namespace `Khalyuzh`: composition root,
+  HTTP application, controllers, Database и repositories;
 - `app/templates/` — Twig-layout и страницы;
 - `app/config.php` — путь к БД, часовой пояс и параметры рациона;
 - `storage/` — SQLite-база и локальные резервные копии;
@@ -130,4 +139,5 @@ composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 весь `/admin/` через HTTP Basic Authentication. Пример конфигурации находится
 в `deploy/nginx.example.conf`. Полный
 deployment-контракт, порядок миграции и rollback описаны в `DEPLOYMENT.md`;
-фактические production-runbooks находятся в отдельном инфраструктурном проекте.
+production-инфраструктура, выполнение deploy и серверные runbooks находятся за
+пределами ответственности этого репозитория.

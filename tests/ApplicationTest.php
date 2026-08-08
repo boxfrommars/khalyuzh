@@ -35,6 +35,10 @@ final class ApplicationTest extends DatabaseTestCase
                 '"isAdmin":' . ($admin ? 'true' : 'false'),
                 $content,
             );
+            self::assertStringContainsString('role="tablist"', $content);
+            self::assertStringContainsString('aria-controls="history-list"', $content);
+            self::assertStringContainsString('aria-controls="history-chart"', $content);
+            self::assertStringContainsString('class="history-chart history-panel"', $content);
         }
     }
 

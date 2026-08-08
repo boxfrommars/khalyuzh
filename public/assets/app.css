@@ -7,6 +7,9 @@
   --muted: #6f6b61;
   --line: #ded9ce;
   --focus: #4d6b5a;
+  --chart-actual: #5571ad;
+  --chart-average: #2f6b50;
+  --chart-boundary: #a96a32;
   --neutral-bg: #eeebe3;
   --neutral-border: #d4cfc3;
   --good: #205f42;
@@ -313,6 +316,40 @@ button:disabled {
   margin-bottom: 22px;
 }
 
+.history-view-toggle {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 3px;
+  margin-bottom: 18px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--neutral-bg);
+}
+
+.history-view-button {
+  padding: 7px 13px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.history-view-button:hover {
+  color: var(--text);
+}
+
+.history-view-button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgb(56 48 33 / 10%);
+}
+
+.history-panel[hidden],
+.chart-tooltip[hidden] {
+  display: none;
+}
+
 .history-average {
   display: grid;
   justify-items: end;
@@ -351,6 +388,178 @@ button:disabled {
 .history-list {
   display: grid;
   gap: 12px;
+}
+
+.history-chart {
+  min-width: 0;
+}
+
+.chart-figure {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-legend-swatch {
+  width: 22px;
+  border-top: 2px solid var(--focus);
+}
+
+.chart-legend-average {
+  border-color: var(--chart-average);
+  border-top-width: 3px;
+}
+
+.chart-legend-series {
+  border-color: var(--chart-actual);
+  opacity: 0.8;
+}
+
+.chart-legend-boundaries {
+  border-color: var(--chart-boundary);
+  border-top-style: dashed;
+}
+
+.chart-plot {
+  position: relative;
+  min-width: 0;
+}
+
+.history-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-grid line,
+.chart-date-labels line {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-grid text,
+.chart-date-labels text,
+.chart-axis-title {
+  fill: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-axis-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chart-axis-line {
+  stroke: var(--neutral-border) !important;
+}
+
+.chart-daily-line,
+.chart-average-line,
+.chart-boundary {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-daily-line {
+  stroke: var(--chart-actual);
+  stroke-width: 1.5;
+  opacity: 0.55;
+}
+
+.chart-average-line {
+  stroke: var(--chart-average);
+  stroke-width: 3.25;
+}
+
+.chart-boundary {
+  stroke-width: 1.5;
+}
+
+.chart-boundary-lower,
+.chart-boundary-upper {
+  stroke: var(--chart-boundary);
+  stroke-dasharray: 7 5;
+}
+
+.chart-point-target {
+  cursor: pointer;
+  outline: none;
+}
+
+.chart-point-hit {
+  fill: transparent;
+}
+
+.chart-point-dot {
+  fill: var(--surface);
+  stroke: var(--chart-actual);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-point-target:hover .chart-point-dot,
+.chart-point-target:focus .chart-point-dot {
+  fill: var(--chart-actual);
+  stroke: var(--surface);
+  stroke-width: 3;
+}
+
+.chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  min-width: 126px;
+  max-width: min(220px, 80vw);
+  padding: 9px 11px;
+  border: 1px solid var(--neutral-border);
+  border-radius: 10px;
+  background: var(--text);
+  box-shadow: 0 8px 20px rgb(37 36 31 / 18%);
+  color: #fff;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.chart-tooltip[data-align="start"] {
+  transform: translate(0, calc(-100% - 10px));
+}
+
+.chart-tooltip[data-align="end"] {
+  transform: translate(-100%, calc(-100% - 10px));
+}
+
+.chart-tooltip strong,
+.chart-tooltip span {
+  display: block;
+  white-space: nowrap;
+}
+
+.chart-caption {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-align: right;
 }
 
 .empty-history,
@@ -559,6 +768,12 @@ button:disabled {
 
   .history-header {
     flex-direction: column;
+  }
+
+  .history-view-toggle {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+    width: 100%;
   }
 
   .history-average {

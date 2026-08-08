@@ -61,7 +61,7 @@
     </form>
   </section>
 
-  <section class="card" aria-labelledby="history-title">
+  <section class="card" id="history-section" aria-labelledby="history-title">
     <header class="history-header">
       <h2 id="history-title">История</h2>
       <div class="history-average" id="history-average" aria-live="polite" hidden>
@@ -72,7 +72,16 @@
         </div>
       </div>
     </header>
-    <div class="history-list" id="history-list"></div>
+    <div class="history-view-toggle" role="tablist" aria-label="Вид истории калорий">
+      <button class="history-view-button" id="history-list-tab" type="button" role="tab"
+              aria-selected="true" aria-controls="history-list">Список</button>
+      <button class="history-view-button" id="history-chart-tab" type="button" role="tab"
+              aria-selected="false" aria-controls="history-chart" tabindex="-1">График</button>
+    </div>
+    <div class="history-list history-panel" id="history-list" role="tabpanel"
+         aria-labelledby="history-list-tab"></div>
+    <div class="history-chart history-panel" id="history-chart" role="tabpanel"
+         aria-labelledby="history-chart-tab" hidden></div>
   </section>
 {% endblock %}
 

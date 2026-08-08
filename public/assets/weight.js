@@ -3,8 +3,11 @@
 import {
   formatDate,
   pageConfig,
+  renderHistoryChart,
   requestJSON,
-  toLocalISODate
+  setupHistoryViewToggle,
+  toLocalISODate,
+  withCalendarRollingAverage
 } from "./common.js";
 
 const config = pageConfig();
@@ -20,7 +23,10 @@ const latestWeight = document.querySelector("#latest-weight");
 const latestWeightValue = document.querySelector("#latest-weight-value");
 const latestWeightDate = document.querySelector("#latest-weight-date");
 const emptyLatest = document.querySelector("#empty-latest");
+const historySection = document.querySelector("#history-section");
 const historyList = document.querySelector("#history-list");
+const historyChart = document.querySelector("#history-chart");
+const historyViewToggle = document.querySelector(".history-view-toggle");
 const historyAverage = document.querySelector("#history-average");
 const historyAverageValue = document.querySelector("#history-average-value");
 
@@ -38,6 +44,34 @@ function numberFrom(input) {
   return Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : NaN;
 }
 
+function weightChartPoints(records) {
+  return withCalendarRollingAverage(records.map((record) => ({
+    date: record.date,
+    value: record.weightKg
+  })));
+}
+
+function renderWeightChart(points, emptyMessage = "История пока пуста.", retryLabel = "") {
+  renderHistoryChart(historyChart, {
+    points,
+    emptyMessage,
+    retryLabel,
+    ariaLabel: "Средний и точный вес по датам",
+    averageLabel: "Среднее за 7 дней",
+    seriesLabel: "Фактические значения",
+    axisLabel: "кг",
+    formatAxisValue: (value) => weightFormatter.format(value),
+    formatValue: formatWeight,
+    pointLabel: (point) =>
+      `${formatDate(point.date)}: ${formatWeight(point.value)}. Среднее за 7 дней ${formatWeight(point.rollingAverage)}.`,
+    tooltipLines: (point) => [
+      formatDate(point.date),
+      `Точно: ${formatWeight(point.value)}`,
+      `Среднее за 7 дней: ${formatWeight(point.rollingAverage)}`
+    ]
+  });
+}
+
 function setFeedback(message, isError = false) {
   if (!feedback) return;
   feedback.textContent = message;
@@ -51,6 +85,7 @@ function renderLoading() {
   }
   historyAverage.hidden = true;
   historyList.innerHTML = '<p class="empty-history">Загружаем историю…</p>';
+  renderWeightChart([], "Загружаем историю…");
 }
 
 function renderError() {
@@ -64,6 +99,7 @@ function renderError() {
       <p>Не удалось загрузить историю.</p>
       <button class="text-button" type="button" data-action="retry">Повторить</button>
     </div>`;
+  renderWeightChart([], "Не удалось загрузить историю.", "Повторить");
 }
 
 function renderLatest(records) {
@@ -82,34 +118,29 @@ function renderLatest(records) {
   emptyLatest.hidden = true;
 }
 
-function renderAverage(records) {
-  if (!records.length) {
+function renderAverage(chartPoints) {
+  if (!chartPoints.length) {
     historyAverage.hidden = true;
     return;
   }
 
-  const latestDate = records[0].date;
-  const firstDate = new Date(`${latestDate}T12:00:00`);
-  firstDate.setDate(firstDate.getDate() - 6);
-  const firstDateISO = toLocalISODate(firstDate);
-  const recentRecords = records.filter((record) =>
-    record.date >= firstDateISO && record.date <= latestDate
-  );
-  const total = recentRecords.reduce((sum, record) => sum + record.weightKg, 0);
-
-  historyAverageValue.textContent = formatWeight(total / recentRecords.length);
+  historyAverageValue.textContent = formatWeight(chartPoints.at(-1).rollingAverage);
   historyAverage.hidden = false;
 }
 
 function renderHistory() {
   const records = [...state.records].sort((a, b) => b.date.localeCompare(a.date));
+  const chartPoints = weightChartPoints(records);
   renderLatest(records);
-  renderAverage(records);
+  renderAverage(chartPoints);
+
+  const emptyMessage = IS_ADMIN
+    ? "Сохраните первое взвешивание — оно появится здесь."
+    : "История пока пуста.";
+  renderWeightChart(chartPoints, emptyMessage);
 
   if (!records.length) {
-    historyList.innerHTML = `<p class="empty-history">${IS_ADMIN
-      ? "Сохраните первое взвешивание — оно появится здесь."
-      : "История пока пуста."}</p>`;
+    historyList.innerHTML = `<p class="empty-history">${emptyMessage}</p>`;
     return;
   }
 
@@ -210,7 +241,7 @@ if (form) {
   });
 }
 
-historyList.addEventListener("click", async (event) => {
+historySection.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
 
@@ -242,6 +273,7 @@ historyList.addEventListener("click", async (event) => {
   }
 });
 
+setupHistoryViewToggle(historyViewToggle);
 refreshRecords({ showLoading: true }).then(() => {
   if (IS_ADMIN) loadDate(toLocalISODate(new Date()));
 });

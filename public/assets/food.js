@@ -4,8 +4,11 @@ import {
   escapeHTML,
   formatDate,
   pageConfig,
+  renderHistoryChart,
   requestJSON,
-  toLocalISODate
+  setupHistoryViewToggle,
+  toLocalISODate,
+  withCalendarRollingAverage
 } from "./common.js";
 
 const config = pageConfig();
@@ -27,7 +30,10 @@ const breakdownOutput = document.querySelector("#breakdown");
 const rangeNote = document.querySelector("#range-note");
 const saveButton = document.querySelector("#save-button");
 const feedback = document.querySelector("#feedback");
+const historySection = document.querySelector("#history-section");
 const historyList = document.querySelector("#history-list");
+const historyChart = document.querySelector("#history-chart");
+const historyViewToggle = document.querySelector(".history-view-toggle");
 const historyAverage = document.querySelector("#history-average");
 const historyAverageValue = document.querySelector("#history-average-value");
 const historyAverageBadge = document.querySelector("#history-average-badge");
@@ -73,9 +79,45 @@ function numberFrom(input) {
   return Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : 0;
 }
 
+function calorieChartPoints(records) {
+  return withCalendarRollingAverage(records.map((record) => {
+    const values = calculateValues(record.dryAmount, record.wetAmount, profileFromRecord(record));
+    return {
+      date: record.date,
+      value: values.totalCalories,
+      lowerBound: record.targetMin,
+      upperBound: record.targetMax
+    };
+  }));
+}
+
+function renderCalorieChart(points, emptyMessage = "История пока пуста.", retryLabel = "") {
+  renderHistoryChart(historyChart, {
+    points,
+    emptyMessage,
+    retryLabel,
+    ariaLabel: "Среднее за 7 дней, фактические калории и исторические границы нормы",
+    averageLabel: "Среднее за 7 дней",
+    seriesLabel: "Фактические значения",
+    boundsLabel: "Границы нормы",
+    axisLabel: "ккал",
+    formatAxisValue: formatCompact,
+    formatValue: (value) => `${formatCalories(value)} ккал`,
+    pointLabel: (point) =>
+      `${formatDate(point.date)}: ${formatCalories(point.value)} ккал. Среднее за 7 дней ${formatCalories(point.rollingAverage)} ккал. Норма ${formatCompact(point.lowerBound)}–${formatCompact(point.upperBound)} ккал.`,
+    tooltipLines: (point) => [
+      formatDate(point.date),
+      `Точно: ${formatCalories(point.value)} ккал`,
+      `Среднее за 7 дней: ${formatCalories(point.rollingAverage)} ккал`,
+      `Норма: ${formatCompact(point.lowerBound)}–${formatCompact(point.upperBound)} ккал`
+    ]
+  });
+}
+
 function renderHistoryLoading() {
   historyAverage.hidden = true;
   historyList.innerHTML = '<p class="empty-history">Загружаем историю…</p>';
+  renderCalorieChart([], "Загружаем историю…");
 }
 
 function renderHistoryError() {
@@ -85,6 +127,7 @@ function renderHistoryError() {
       <p>Не удалось загрузить историю.</p>
       <button class="text-button" type="button" data-action="retry">Повторить</button>
     </div>`;
+  renderCalorieChart([], "Не удалось загрузить историю.", "Повторить");
 }
 
 async function refreshRecords({ showLoading = false } = {}) {
@@ -228,7 +271,7 @@ function describeRange(totalCalories, targetMin, targetMax) {
   };
 }
 
-function renderHistoryAverage(records) {
+function renderHistoryAverage(records, chartPoints) {
   if (!records.length) {
     historyAverage.hidden = true;
     return;
@@ -242,14 +285,12 @@ function renderHistoryAverage(records) {
     record.date >= firstDateISO && record.date <= latestDate
   );
   const averages = recentRecords.reduce((accumulator, record) => {
-    const values = calculateValues(record.dryAmount, record.wetAmount, profileFromRecord(record));
-    accumulator.totalCalories += values.totalCalories;
     accumulator.targetMin += record.targetMin;
     accumulator.targetMax += record.targetMax;
     return accumulator;
-  }, { totalCalories: 0, targetMin: 0, targetMax: 0 });
+  }, { targetMin: 0, targetMax: 0 });
   const recordCount = recentRecords.length;
-  const averageCalories = averages.totalCalories / recordCount;
+  const averageCalories = chartPoints.at(-1).rollingAverage;
   const averageMin = averages.targetMin / recordCount;
   const averageMax = averages.targetMax / recordCount;
   const range = describeRange(averageCalories, averageMin, averageMax);
@@ -262,12 +303,16 @@ function renderHistoryAverage(records) {
 
 function renderHistory() {
   const records = [...state.records].sort((a, b) => b.date.localeCompare(a.date));
-  renderHistoryAverage(records);
+  const chartPoints = calorieChartPoints(records);
+  renderHistoryAverage(records, chartPoints);
+
+  const emptyMessage = IS_ADMIN
+    ? "Сохраните первый день — он появится здесь."
+    : "История пока пуста.";
+  renderCalorieChart(chartPoints, emptyMessage);
 
   if (!records.length) {
-    historyList.innerHTML = `<p class="empty-history">${IS_ADMIN
-      ? "Сохраните первый день — он появится здесь."
-      : "История пока пуста."}</p>`;
+    historyList.innerHTML = `<p class="empty-history">${emptyMessage}</p>`;
     return;
   }
 
@@ -358,7 +403,7 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-historyList.addEventListener("click", async (event) => {
+historySection.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
 
@@ -391,6 +436,7 @@ historyList.addEventListener("click", async (event) => {
 });
 
 async function initialize() {
+  setupHistoryViewToggle(historyViewToggle);
   dateInput.max = toLocalISODate(new Date());
   const initialDate = yesterdayISO();
   loadDate(initialDate);

@@ -24,10 +24,7 @@ const dryHint = document.querySelector("#dry-hint");
 const wetHint = document.querySelector("#wet-hint");
 const result = document.querySelector("#result");
 const totalValueOutput = document.querySelector("#total-value");
-const comparisonOutput = document.querySelector("#comparison");
-const statusOutput = document.querySelector("#status");
 const breakdownOutput = document.querySelector("#breakdown");
-const rangeNote = document.querySelector("#range-note");
 const saveButton = document.querySelector("#save-button");
 const feedback = document.querySelector("#feedback");
 const historySection = document.querySelector("#history-section");
@@ -36,7 +33,6 @@ const historyChart = document.querySelector("#history-chart");
 const historyViewToggle = document.querySelector(".history-view-toggle");
 const historyAverage = document.querySelector("#history-average");
 const historyAverageValue = document.querySelector("#history-average-value");
-const historyAverageBadge = document.querySelector("#history-average-badge");
 
 const state = {
   records: [],
@@ -84,9 +80,7 @@ function calorieChartPoints(records) {
     const values = calculateValues(record.dryAmount, record.wetAmount, profileFromRecord(record));
     return {
       date: record.date,
-      value: values.totalCalories,
-      lowerBound: record.targetMin,
-      upperBound: record.targetMax
+      value: values.totalCalories
     };
   }));
 }
@@ -96,20 +90,18 @@ function renderCalorieChart(points, emptyMessage = "История пока пу
     points,
     emptyMessage,
     retryLabel,
-    ariaLabel: "Среднее за 7 дней, фактические калории и исторические границы нормы",
+    ariaLabel: "Среднее за 7 дней и фактические калории",
     averageLabel: "Среднее за 7 дней",
     seriesLabel: "Фактические значения",
-    boundsLabel: "Границы нормы",
     axisLabel: "ккал",
     formatAxisValue: formatCompact,
     formatValue: (value) => `${formatCalories(value)} ккал`,
     pointLabel: (point) =>
-      `${formatDate(point.date)}: ${formatCalories(point.value)} ккал. Среднее за 7 дней ${formatCalories(point.rollingAverage)} ккал. Норма ${formatCompact(point.lowerBound)}–${formatCompact(point.upperBound)} ккал.`,
+      `${formatDate(point.date)}: ${formatCalories(point.value)} ккал. Среднее за 7 дней ${formatCalories(point.rollingAverage)} ккал.`,
     tooltipLines: (point) => [
       formatDate(point.date),
       `Точно: ${formatCalories(point.value)} ккал`,
-      `Среднее за 7 дней: ${formatCalories(point.rollingAverage)} ккал`,
-      `Норма: ${formatCompact(point.lowerBound)}–${formatCompact(point.upperBound)} ккал`
+      `Среднее за 7 дней: ${formatCalories(point.rollingAverage)} ккал`
     ]
   });
 }
@@ -154,9 +146,7 @@ function profileFromRecord(record) {
     dryName: record.dryName,
     dryCaloriesPerGram: record.dryCaloriesPerGram,
     wetName: record.wetName,
-    wetCaloriesPerCan: record.wetCaloriesPerCan,
-    targetMin: record.targetMin,
-    targetMax: record.targetMax
+    wetCaloriesPerCan: record.wetCaloriesPerCan
   };
 }
 
@@ -167,22 +157,18 @@ function calculateValues(dryAmount, wetAmount, profile) {
   return {
     dryCalories,
     wetCalories,
-    totalCalories,
-    isInRange: totalCalories >= profile.targetMin && totalCalories <= profile.targetMax
+    totalCalories
   };
 }
 
 function updateLabels(profile) {
   dryHint.textContent = `${profile.dryName || "Сухой корм"} · ${formatCompact(profile.dryCaloriesPerGram)} ккал/г`;
   wetHint.textContent = `${profile.wetName || "Влажный корм"} · ${formatCompact(profile.wetCaloriesPerCan)} ккал/банка`;
-  rangeNote.textContent = `Целевой диапазон: ${formatCompact(profile.targetMin)}–${formatCompact(profile.targetMax)} ккал`;
 }
 
 function showNeutralResult() {
   result.className = "result";
   totalValueOutput.textContent = "—";
-  comparisonOutput.textContent = "";
-  statusOutput.textContent = "Введите количество корма";
   breakdownOutput.textContent = "";
   breakdownOutput.hidden = true;
 }
@@ -197,19 +183,8 @@ function updateResult() {
   }
 
   const values = calculateValues(numberFrom(dryInput), numberFrom(wetInput), profile);
-  result.className = `result ${values.isInRange ? "in-range" : "out-of-range"}`;
+  result.className = "result";
   totalValueOutput.textContent = `${formatCalories(values.totalCalories)} ккал`;
-
-  if (values.isInRange) {
-    comparisonOutput.textContent = "";
-    statusOutput.textContent = "В пределах нормы";
-  } else if (values.totalCalories < profile.targetMin) {
-    comparisonOutput.textContent = `< ${formatCompact(profile.targetMin)} ккал`;
-    statusOutput.textContent = `Не хватает ${formatCalories(profile.targetMin - values.totalCalories)} ккал до нормы`;
-  } else {
-    comparisonOutput.textContent = `> ${formatCompact(profile.targetMax)} ккал`;
-    statusOutput.textContent = `Превышение на ${formatCalories(values.totalCalories - profile.targetMax)} ккал`;
-  }
 
   breakdownOutput.textContent = `Сухой: ${formatCalories(values.dryCalories)} ккал · влажный: ${formatCalories(values.wetCalories)} ккал`;
   breakdownOutput.hidden = false;
@@ -248,63 +223,22 @@ function validateEntry() {
   return "";
 }
 
-function describeRange(totalCalories, targetMin, targetMax) {
-  const isBelowRange = totalCalories < targetMin;
-  const isInRange = !isBelowRange && totalCalories <= targetMax;
-
-  if (isInRange) {
-    return { isBelowRange, isInRange, badgeText: "В норме" };
-  }
-
-  const boundary = isBelowRange ? targetMin : targetMax;
-  const deviationCalories = isBelowRange
-    ? targetMin - totalCalories
-    : totalCalories - targetMax;
-  const deviationPercent = boundary > 0
-    ? ` (${formatCalories(deviationCalories / boundary * 100)}%)`
-    : "";
-
-  return {
-    isBelowRange,
-    isInRange,
-    badgeText: `${isBelowRange ? "Ниже" : "Выше"} нормы на ${formatCalories(deviationCalories)} ккал${deviationPercent}`
-  };
-}
-
-function renderHistoryAverage(records, chartPoints) {
-  if (!records.length) {
+function renderHistoryAverage(chartPoints) {
+  if (!chartPoints.length) {
     historyAverage.hidden = true;
     return;
   }
 
-  const latestDate = records[0].date;
-  const firstDate = new Date(`${latestDate}T12:00:00`);
-  firstDate.setDate(firstDate.getDate() - 6);
-  const firstDateISO = toLocalISODate(firstDate);
-  const recentRecords = records.filter((record) =>
-    record.date >= firstDateISO && record.date <= latestDate
-  );
-  const averages = recentRecords.reduce((accumulator, record) => {
-    accumulator.targetMin += record.targetMin;
-    accumulator.targetMax += record.targetMax;
-    return accumulator;
-  }, { targetMin: 0, targetMax: 0 });
-  const recordCount = recentRecords.length;
   const averageCalories = chartPoints.at(-1).rollingAverage;
-  const averageMin = averages.targetMin / recordCount;
-  const averageMax = averages.targetMax / recordCount;
-  const range = describeRange(averageCalories, averageMin, averageMax);
 
   historyAverageValue.textContent = `${formatCalories(averageCalories)} ккал`;
-  historyAverageBadge.textContent = range.badgeText;
-  historyAverageBadge.className = `badge ${range.isInRange ? "good" : "warning"}`;
   historyAverage.hidden = false;
 }
 
 function renderHistory() {
   const records = [...state.records].sort((a, b) => b.date.localeCompare(a.date));
   const chartPoints = calorieChartPoints(records);
-  renderHistoryAverage(records, chartPoints);
+  renderHistoryAverage(chartPoints);
 
   const emptyMessage = IS_ADMIN
     ? "Сохраните первый день — он появится здесь."
@@ -318,28 +252,21 @@ function renderHistory() {
 
   historyList.innerHTML = records.map((record) => {
     const values = calculateValues(record.dryAmount, record.wetAmount, profileFromRecord(record));
-    const range = describeRange(values.totalCalories, record.targetMin, record.targetMax);
-    const comparison = range.isInRange
-      ? ""
-      : range.isBelowRange
-        ? `&lt; ${formatCompact(record.targetMin)} ккал`
-        : `&gt; ${formatCompact(record.targetMax)} ккал`;
 
     return `
       <details class="history-item">
         <summary class="history-summary">
           <span class="history-date"><time datetime="${record.date}">${formatDate(record.date)}</time></span>
           <span class="history-summary-total">${formatCalories(values.totalCalories)} ккал</span>
-          <span class="badge ${range.isInRange ? "good" : "warning"}">${range.badgeText}</span>
         </summary>
         <div class="history-expanded">
           <p class="history-total">
-            ${formatCalories(values.totalCalories)} ккал${comparison ? ` <span class="history-comparison">${comparison}</span>` : ""}
+            ${formatCalories(values.totalCalories)} ккал
           </p>
           <p class="history-details">
             ${escapeHTML(record.dryName)}: ${formatCompact(record.dryAmount)} г ·
             ${escapeHTML(record.wetName)}: ${formatCompact(record.wetAmount)} ${canUnit(record.wetAmount)}<br>
-            Вес: ${formatCompact(record.catWeight)} кг · Норма: ${formatCompact(record.targetMin)}–${formatCompact(record.targetMax)} ккал
+            Вес: ${formatCompact(record.catWeight)} кг
           </p>
           ${IS_ADMIN ? `
             <div class="history-actions">

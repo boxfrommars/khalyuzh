@@ -30,7 +30,12 @@ final readonly class PageController
             'page_config' => $this->pageConfig([
                 'isAdmin' => $isAdmin,
                 'apiUrl' => $isAdmin ? '/admin/api.php' : '/api.php',
-                'profile' => $this->profile,
+                'profile' => [
+                    'dryName' => $this->profile['dryName'],
+                    'dryCaloriesPerGram' => $this->profile['dryCaloriesPerGram'],
+                    'wetName' => $this->profile['wetName'],
+                    'wetCaloriesPerCan' => $this->profile['wetCaloriesPerCan'],
+                ],
             ]),
         ]));
     }

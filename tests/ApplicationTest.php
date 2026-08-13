@@ -169,6 +169,29 @@ final class ApplicationTest extends DatabaseTestCase
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
     }
 
+    public function testFoodPagesDoNotExposeCalorieTargetUi(): void
+    {
+        foreach ([['/', []], ['/admin/', ['REMOTE_USER' => 'tester']]] as [$path, $server]) {
+            $response = $this->application()->handle(Request::create(
+                $path,
+                'GET',
+                [],
+                [],
+                [],
+                $server,
+            ));
+            $content = $response->getContent();
+
+            self::assertNotFalse($content);
+            self::assertStringContainsString('"dryCaloriesPerGram":4.2', $content);
+            self::assertStringNotContainsString('targetMin', $content);
+            self::assertStringNotContainsString('targetMax', $content);
+            self::assertStringNotContainsString('id="range-note"', $content);
+            self::assertStringNotContainsString('id="comparison"', $content);
+            self::assertStringNotContainsString('id="history-average-badge"', $content);
+        }
+    }
+
     private function application(): Application
     {
         $api = $this->apiController();

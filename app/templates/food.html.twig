@@ -44,13 +44,10 @@
       <section class="result" id="result" aria-live="polite" aria-atomic="true">
         <p class="result-label">Итого</p>
         <p class="total" id="total">
-          <span id="total-value">—</span> <span class="comparison" id="comparison"></span>
+          <span id="total-value">—</span>
         </p>
-        <p class="status" id="status">Введите количество корма</p>
         <p class="breakdown" id="breakdown" hidden></p>
       </section>
-
-      <p class="range-note" id="range-note"></p>
 
       {% if is_admin %}
         <div class="actions">
@@ -66,10 +63,7 @@
       <h2 id="history-title">История</h2>
       <div class="history-average" id="history-average" aria-live="polite" hidden>
         <p class="history-average-label">Среднее за 7 дней</p>
-        <div class="history-average-result">
-          <strong class="history-average-value" id="history-average-value"></strong>
-          <span class="badge" id="history-average-badge"></span>
-        </div>
+        <strong class="history-average-value" id="history-average-value"></strong>
       </div>
     </header>
     <div class="history-view-toggle" role="tablist" aria-label="Вид истории калорий">

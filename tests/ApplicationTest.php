@@ -8,6 +8,7 @@ use Khalyuzh\ApiController;
 use Khalyuzh\AppFactory;
 use Khalyuzh\Application;
 use Khalyuzh\PageController;
+use Khalyuzh\ReportController;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,6 +32,10 @@ final class ApplicationTest extends DatabaseTestCase
         self::assertStringContainsString($expectedContent, $content);
 
         if (str_ends_with($path, '/')) {
+            self::assertStringContainsString('href="/report/"', $content);
+        }
+
+        if (in_array($path, ['/', '/weight/', '/admin/', '/admin/weight/'], true)) {
             self::assertStringContainsString(
                 '"isAdmin":' . ($admin ? 'true' : 'false'),
                 $content,
@@ -51,6 +56,7 @@ final class ApplicationTest extends DatabaseTestCase
         yield 'public food API' => ['/api.php', '"records":[]', false];
         yield 'public weight page' => ['/weight/', 'Вес Халюжа', false];
         yield 'public weight API' => ['/weight/api.php', '"records":[]', false];
+        yield 'public report' => ['/report/', 'Данные для ветеринара', false];
         yield 'admin food page' => ['/admin/', 'Рацион Халюжа', true];
         yield 'admin food API' => ['/admin/api.php', '"records":[]', true];
         yield 'admin weight page' => ['/admin/weight/', 'Вес Халюжа', true];
@@ -73,6 +79,7 @@ final class ApplicationTest extends DatabaseTestCase
     {
         yield 'admin' => ['/admin', '/admin/'];
         yield 'weight' => ['/weight', '/weight/'];
+        yield 'report' => ['/report', '/report/'];
         yield 'admin weight' => ['/admin/weight', '/admin/weight/'];
     }
 
@@ -161,6 +168,7 @@ final class ApplicationTest extends DatabaseTestCase
         $factory = new AppFactory([
             'databasePath' => '/definitely-missing/records.sqlite',
             'timezone' => 'Asia/Yerevan',
+            'pet' => $this->pet,
             'profile' => $this->profile,
         ]);
 
@@ -209,6 +217,7 @@ final class ApplicationTest extends DatabaseTestCase
                 $this->profile,
             ),
             static fn (): ApiController => $api,
+            fn (): ReportController => $this->reportController(),
         );
     }
 }

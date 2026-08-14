@@ -1,0 +1,179 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ report_title }}{% endblock %}
+{% block description %}Отчёт о кормлении и весе Халюжа для ветеринара{% endblock %}
+
+{% block content %}
+  <section class="card report-controls" aria-labelledby="report-controls-title">
+    <div class="report-controls-header">
+      <div>
+        <p class="eyebrow">Печатный отчёт</p>
+        <h1 id="report-controls-title">Данные для ветеринара</h1>
+        <p class="subtitle">Выберите период, затем распечатайте отчёт или сохраните его как PDF.</p>
+      </div>
+      <button class="primary-button report-print-button" id="print-report" type="button"
+              {% if not report_ready %}disabled{% endif %}>
+        Распечатать / сохранить PDF
+      </button>
+    </div>
+
+    <div class="report-period-presets" aria-label="Быстрый выбор периода">
+      <a class="report-period-link{{ period_key == '30' ? ' selected' : '' }}" href="/report/?period=30"
+         {% if period_key == '30' %}aria-current="page"{% endif %}>30 дней</a>
+      <a class="report-period-link{{ period_key == '90' ? ' selected' : '' }}" href="/report/?period=90"
+         {% if period_key == '90' %}aria-current="page"{% endif %}>90 дней</a>
+      <a class="report-period-link{{ period_key == 'all' ? ' selected' : '' }}" href="/report/?period=all"
+         {% if period_key == 'all' %}aria-current="page"{% endif %}>Вся история</a>
+    </div>
+
+    <form class="report-period-form" action="/report/" method="get">
+      <input name="period" type="hidden" value="custom">
+      <div class="field">
+        <label for="report-from">С</label>
+        <div class="input-wrap">
+          <input id="report-from" name="from" type="date" value="{{ period_from }}" max="{{ today }}" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="report-to">По</label>
+        <div class="input-wrap">
+          <input id="report-to" name="to" type="date" value="{{ period_to }}" max="{{ today }}" required>
+        </div>
+      </div>
+      <button class="secondary-button" type="submit">Показать период</button>
+    </form>
+
+    {% if report_error %}
+      <p class="report-error" role="alert">{{ report_error }}</p>
+    {% endif %}
+  </section>
+
+  {% if report_ready %}
+    <article class="card report-document" aria-labelledby="report-title">
+      <header class="report-document-header">
+        <div>
+          <p class="eyebrow">Дневник Халюжа</p>
+          <h2 id="report-title">Кормление и фактический вес</h2>
+          <p class="report-period">{{ period_display }}</p>
+        </div>
+        <div class="report-generated">
+          <span>Сформирован</span>
+          <strong>{{ generated_at }}</strong>
+        </div>
+      </header>
+
+      <section class="report-section report-pet" aria-labelledby="pet-title">
+        <h3 id="pet-title">Пациент</h3>
+        <dl class="report-definition-grid">
+          <div class="report-pet-name"><dt>Имя</dt><dd>{{ pet.name }}</dd></div>
+          <div class="report-pet-species"><dt>Вид</dt><dd>{{ pet.species }}</dd></div>
+          <div class="report-pet-breed"><dt>Порода</dt><dd>{{ pet.breed }}</dd></div>
+          <div class="report-pet-sex"><dt>Пол</dt><dd>{{ pet.sex }}, {{ pet.reproductiveStatus|lower }}</dd></div>
+          <div class="report-pet-diagnosis"><dt>Диагноз</dt><dd>{{ pet.diagnosis }}</dd></div>
+          <div class="report-pet-coat-color"><dt>Окрас</dt><dd>{{ pet.coatColor }}</dd></div>
+          <div class="report-pet-birth-date"><dt>Дата рождения</dt><dd>{{ pet.birthDateDisplay }}</dd></div>
+          <div class="report-pet-age"><dt>Возраст на дату отчёта</dt><dd>{{ pet.ageDisplay }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="report-section report-summary" aria-labelledby="summary-title">
+        <h3 id="summary-title">Краткая сводка</h3>
+        <div class="report-summary-grid">
+          <article class="report-metric">
+            <span>Средний вес за последние 7 дней</span>
+            <strong>{{ weight_summary.last.average ?? 'Нет данных' }}</strong>
+            <small>{{ weight_summary.last.countDisplay }}</small>
+          </article>
+          <article class="report-metric">
+            <span>Изменение среднего веса</span>
+            <strong>{{ weight_summary.change ?? 'Нет данных' }}</strong>
+            <small class="report-metric-details">Первые 7 дней: {{ weight_summary.first.average ?? 'нет данных' }}, последние 7 дней: {{ weight_summary.last.average ?? 'нет данных' }}</small>
+          </article>
+          <article class="report-metric">
+            <span>Средние калории за последние 7 дней</span>
+            <strong>{{ recent_calories.average ?? 'Нет данных' }}</strong>
+            <small>{{ recent_calories.countDisplay }}</small>
+          </article>
+          <article class="report-metric">
+            <span>Средние калории за выбранный период</span>
+            <strong>{{ average_calories ?? 'Нет данных' }}</strong>
+            <small>{{ food_record_count_display }}</small>
+          </article>
+        </div>
+      </section>
+
+      {% if weight_record_count > 0 %}
+        <section class="report-section report-chart-card" aria-labelledby="weight-chart-title">
+          <h3 id="weight-chart-title">Динамика веса</h3>
+          <div class="history-chart report-chart" id="report-weight-chart"></div>
+          <p class="report-note">Среднее учитывает имеющиеся взвешивания за предыдущие 7 календарных дней, включая до 6 дней перед началом периода. Линии соединяют соседние точки; пропуски не считаются нулём.</p>
+        </section>
+      {% endif %}
+
+      {% if food_record_count > 0 %}
+        <section class="report-section report-chart-card" aria-labelledby="calorie-chart-title">
+          <h3 id="calorie-chart-title">Динамика питания</h3>
+          <div class="history-chart report-chart" id="report-calorie-chart"></div>
+          <p class="report-note">Среднее учитывает имеющиеся записи за предыдущие 7 календарных дней, включая до 6 дней перед началом периода. Линии соединяют соседние точки; пропуски не считаются нулём.</p>
+        </section>
+
+        <section class="report-section report-products-section" aria-labelledby="products-title">
+          <h3 id="products-title">Корма за выбранный период</h3>
+          {% if food_products %}
+            <div class="report-products">
+              {% for product in food_products %}
+                <article class="report-product">
+                  <span>{{ product.type }}</span>
+                  <strong>{{ product.name }}</strong>
+                  <small>{{ product.energy }}</small>
+                </article>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="report-empty">В записях нет ненулевых порций корма.</p>
+          {% endif %}
+        </section>
+      {% endif %}
+
+      <section class="report-section report-table-section" aria-labelledby="daily-table-title">
+        <h3 id="daily-table-title">Дневник кормления и веса</h3>
+        {% if daily_record_chunks %}
+          {% for chunk in daily_record_chunks %}
+            <div class="report-table-wrap report-table-chunk">
+              <table class="report-table report-data-table">
+                <colgroup>
+                  <col class="report-date-column">
+                  <col class="report-value-column">
+                  <col class="report-value-column">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col">Дата</th>
+                    <th scope="col">Калорийность</th>
+                    <th scope="col">Вес</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for record in chunk %}
+                    <tr>
+                      <td><time datetime="{{ record.date }}">{{ record.dateDisplay }}</time></td>
+                      <td class="report-calories">{{ record.caloriesDisplay ?? '—' }}</td>
+                      <td class="report-weight">{{ record.weightDisplay ?? '—' }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="report-empty">Нет записей о кормлении и взвешиваниях за выбранный период.</p>
+        {% endif %}
+      </section>
+
+    </article>
+  {% endif %}
+{% endblock %}
+
+{% block script %}
+  <script type="module" src="/assets/report.js"></script>
+{% endblock %}

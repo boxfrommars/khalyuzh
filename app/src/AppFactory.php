@@ -16,11 +16,22 @@ final class AppFactory
     private ?Environment $twig = null;
     private ?PageController $pages = null;
     private ?ApiController $api = null;
+    private ?ReportController $report = null;
 
     /**
      * @param array{
      *     databasePath: string,
      *     timezone: string,
+     *     pet: array{
+     *         name: string,
+     *         species: string,
+     *         breed: string,
+     *         sex: string,
+     *         reproductiveStatus: string,
+     *         diagnosis: string,
+     *         coatColor: string,
+     *         birthDate: string
+     *     },
      *     profile: array{
      *         catWeight: float|int,
      *         dryName: string,
@@ -41,6 +52,7 @@ final class AppFactory
         return new Application(
             $this->pages(),
             fn (): ApiController => $this->api(),
+            fn (): ReportController => $this->report(),
         );
     }
 
@@ -85,6 +97,25 @@ final class AppFactory
         );
 
         return $this->api;
+    }
+
+    private function report(): ReportController
+    {
+        if ($this->report instanceof ReportController) {
+            return $this->report;
+        }
+
+        $pdo = $this->database()->connection();
+        $this->report = new ReportController(
+            $this->twig(),
+            new FoodRecordRepository($pdo, $this->clock(), $this->config['profile']),
+            new WeightRecordRepository($pdo, $this->clock()),
+            $this->clock(),
+            $this->config['timezone'],
+            $this->config['pet'],
+        );
+
+        return $this->report;
     }
 
     private function twig(): Environment

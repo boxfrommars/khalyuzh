@@ -57,7 +57,8 @@ export function withCalendarRollingAverage(points, days = 7) {
 
     return {
       ...point,
-      rollingAverage: windowTotal / (index - windowStart + 1)
+      rollingAverage: windowTotal / (index - windowStart + 1),
+      rollingCount: index - windowStart + 1
     };
   });
 }
@@ -113,9 +114,18 @@ function chartScale(values, nonNegative) {
 }
 
 function linePath(points, key, xPosition, yPosition) {
-  return points.map((point, index) =>
-    `${index === 0 ? "M" : "L"} ${xPosition(point)} ${yPosition(point[key])}`
-  ).join(" ");
+  let previousPoint = null;
+
+  return points.reduce((path, point) => {
+    if (!Number.isFinite(point[key])) {
+      previousPoint = null;
+      return path;
+    }
+
+    const startsSegment = previousPoint === null;
+    previousPoint = point;
+    return `${path}${path ? " " : ""}${startsSegment ? "M" : "L"} ${xPosition(point)} ${yPosition(point[key])}`;
+  }, "");
 }
 
 function stepPath(points, key, xPosition, yPosition, left, right) {
@@ -160,7 +170,11 @@ function drawHistoryChart(container, state) {
     .map((point) => ({ ...point, timestamp: chartTimestamp(point.date) }))
     .filter((point) => Number.isFinite(point.timestamp) && Number.isFinite(point.value))
     .sort((a, b) => a.timestamp - b.timestamp);
-  const points = allPoints.slice(-40);
+  const maximumPoints = options.maxPoints === null
+    ? allPoints.length
+    : Number.isInteger(options.maxPoints) && options.maxPoints > 0 ? options.maxPoints : 40;
+  const points = allPoints.slice(-maximumPoints);
+  const showAverage = options.showAverage !== false;
 
   if (!points.length) {
     chartStatus(container, options.emptyMessage || "История пока пуста.", options.retryLabel);
@@ -177,7 +191,7 @@ function drawHistoryChart(container, state) {
   const plotHeight = height - margin.top - margin.bottom;
   const values = points.flatMap((point) => [
     point.value,
-    ...(Number.isFinite(point.rollingAverage) ? [point.rollingAverage] : []),
+    ...(showAverage && Number.isFinite(point.rollingAverage) ? [point.rollingAverage] : []),
     ...(Number.isFinite(point.lowerBound) ? [point.lowerBound] : []),
     ...(Number.isFinite(point.upperBound) ? [point.upperBound] : [])
   ]);
@@ -204,10 +218,16 @@ function drawHistoryChart(container, state) {
 
   const legend = document.createElement("div");
   legend.className = "chart-legend";
-  const legendItems = [
-    { label: options.averageLabel || "Среднее за 7 дней", className: "chart-legend-average" },
-    { label: options.seriesLabel, className: "chart-legend-series" }
-  ];
+  const legendItems = [];
+  if (showAverage) {
+    legendItems.push({
+      label: options.averageLabel || "Среднее за 7 дней",
+      className: "chart-legend-average"
+    });
+  }
+  if (options.seriesLabel) {
+    legendItems.push({ label: options.seriesLabel, className: "chart-legend-series" });
+  }
   if (points.some((point) => Number.isFinite(point.lowerBound) || Number.isFinite(point.upperBound))) {
     legendItems.push({ label: options.boundsLabel || "Границы нормы", className: "chart-legend-boundaries" });
   }
@@ -236,7 +256,8 @@ function drawHistoryChart(container, state) {
     createSvgElement(
       "desc",
       { id: descriptionId },
-      `Показано ${points.length} из ${allPoints.length} последних записей с ${formatDate(points[0].date)} по ${formatDate(points.at(-1).date)}. Основная линия показывает среднее за 7 дней.`
+      options.ariaDescription
+        || `Показано ${points.length} из ${allPoints.length} записей с ${formatDate(points[0].date)} по ${formatDate(points.at(-1).date)}.${showAverage ? " Основная линия показывает среднее за 7 дней." : ""}`
     )
   );
 
@@ -311,16 +332,19 @@ function drawHistoryChart(container, state) {
     }));
   }
   if (points.length > 1) {
+    const dailyPath = linePath(points, "value", xPosition, yPosition);
     svg.append(createSvgElement("path", {
-      d: linePath(points, "value", xPosition, yPosition),
+      d: dailyPath,
       class: "chart-daily-line",
       "aria-hidden": "true"
     }));
-    svg.append(createSvgElement("path", {
-      d: linePath(points, "rollingAverage", xPosition, yPosition),
-      class: "chart-average-line",
-      "aria-hidden": "true"
-    }));
+    if (showAverage) {
+      svg.append(createSvgElement("path", {
+        d: linePath(points, "rollingAverage", xPosition, yPosition),
+        class: "chart-average-line",
+        "aria-hidden": "true"
+      }));
+    }
   }
 
   const tooltip = document.createElement("div");
@@ -349,7 +373,10 @@ function drawHistoryChart(container, state) {
   };
 
   const pointGroup = createSvgElement("g", { class: "chart-points" });
-  points.forEach((point) => {
+  const pointLimit = Number.isInteger(options.pointLimit) && options.pointLimit >= 0
+    ? options.pointLimit
+    : Number.POSITIVE_INFINITY;
+  if (points.length <= pointLimit) points.forEach((point) => {
     const accessibleLabel = options.pointLabel
       ? options.pointLabel(point)
       : `${formatDate(point.date)}: ${formatValue(point.value)}`;

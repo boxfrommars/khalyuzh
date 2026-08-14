@@ -9,12 +9,14 @@
 </head>
 
 <body>
-  <main>
+  <main{% if active_section == 'report' %} class="report-main"{% endif %}>
     <nav class="site-nav" aria-label="Разделы дневника">
       <a class="site-nav-link" href="{{ is_admin ? '/admin/' : '/' }}"
          {% if active_section == 'food' %}aria-current="page"{% endif %}>Рацион</a>
       <a class="site-nav-link" href="{{ is_admin ? '/admin/weight/' : '/weight/' }}"
          {% if active_section == 'weight' %}aria-current="page"{% endif %}>Вес</a>
+      <a class="site-nav-link" href="/report/"
+         {% if active_section == 'report' %}aria-current="page"{% endif %}>Отчёт</a>
     </nav>
 
     {% block content %}{% endblock %}

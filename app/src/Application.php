@@ -13,10 +13,12 @@ final readonly class Application
 {
     /**
      * @param Closure(): ApiController $api
+     * @param Closure(): ReportController $report
      */
     public function __construct(
         private PageController $pages,
         private Closure $api,
+        private Closure $report,
     ) {
     }
 
@@ -27,6 +29,7 @@ final readonly class Application
         $redirect = match ($path) {
             '/admin' => '/admin/',
             '/weight' => '/weight/',
+            '/report' => '/report/',
             '/admin/weight' => '/admin/weight/',
             default => null,
         };
@@ -47,6 +50,7 @@ final readonly class Application
             '/api.php' => ($this->api)()->food($request, false),
             '/weight/' => $this->pages->weight(false),
             '/weight/api.php' => ($this->api)()->weight($request, false),
+            '/report/' => ($this->report)()->report($request),
             '/admin/' => $this->pages->food(true),
             '/admin/api.php' => ($this->api)()->food($request, true),
             '/admin/weight/' => $this->pages->weight(true),

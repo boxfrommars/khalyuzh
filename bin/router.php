@@ -10,6 +10,7 @@ $assets = [
     '/assets/common.js',
     '/assets/food.js',
     '/assets/weight.js',
+    '/assets/report.js',
 ];
 
 if (in_array($path, $assets, true)) {

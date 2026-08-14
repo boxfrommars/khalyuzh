@@ -450,6 +450,28 @@ button:disabled {
   stroke-width: 3.25;
 }
 
+.chart-average-markers {
+  pointer-events: none;
+}
+
+.chart-average-marker {
+  fill: var(--chart-average);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-average-marker-label {
+  fill: var(--chart-average);
+  stroke: var(--surface);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .chart-boundary {
   stroke-width: 1.5;
 }

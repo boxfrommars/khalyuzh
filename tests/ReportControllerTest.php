@@ -37,7 +37,7 @@ final class ReportControllerTest extends DatabaseTestCase
         self::assertStringContainsString('113,0 ккал', $content);
         self::assertStringContainsString('Средний вес за последние 7 дней', $content);
         self::assertStringContainsString('5,73 кг', $content);
-        self::assertStringContainsString('+0,73 кг', $content);
+        self::assertStringContainsString('+733 г', $content);
         self::assertStringContainsString('Первые 7 дней: 5,00 кг, последние 7 дней: 5,73 кг', $content);
         self::assertStringContainsString('Средние калории за последние 7 дней', $content);
         self::assertStringContainsString('<strong>84,0 ккал</strong>', $content);
@@ -85,7 +85,7 @@ final class ReportControllerTest extends DatabaseTestCase
         $config = $this->pageConfig($content);
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
-        self::assertStringContainsString('<strong>+0,60 кг</strong>', $content);
+        self::assertStringContainsString('<strong>+600 г</strong>', $content);
         self::assertStringContainsString(
             'Первые 7 дней: 4,90 кг, последние 7 дней: 5,50 кг',
             $content,
@@ -111,7 +111,7 @@ final class ReportControllerTest extends DatabaseTestCase
         $content = $this->content($response);
 
         self::assertStringContainsString('<strong>4,90 кг</strong>', $content);
-        self::assertStringContainsString('<strong>0,00 кг</strong>', $content);
+        self::assertStringContainsString('<strong>0 г</strong>', $content);
         self::assertStringContainsString(
             'Первые 7 дней: 4,90 кг, последние 7 дней: 4,90 кг',
             $content,
@@ -280,7 +280,7 @@ final class ReportControllerTest extends DatabaseTestCase
 
         self::assertStringContainsString('Средний вес за последние 7 дней', $content);
         self::assertStringContainsString('<strong>6,00 кг</strong>', $content);
-        self::assertStringContainsString('<strong>+1,00 кг</strong>', $content);
+        self::assertStringContainsString('<strong>+1000 г</strong>', $content);
         self::assertStringContainsString('Первые 7 дней: 5,00 кг, последние 7 дней: 6,00 кг', $content);
         self::assertStringNotContainsString('09.07.2026', $content);
         self::assertStringNotContainsString('16.07.2026', $content);
@@ -301,7 +301,7 @@ final class ReportControllerTest extends DatabaseTestCase
         $content = $this->content($response);
 
         self::assertStringContainsString('<strong>5,50 кг</strong>', $content);
-        self::assertStringContainsString('<strong>+0,60 кг</strong>', $content);
+        self::assertStringContainsString('<strong>+600 г</strong>', $content);
         self::assertStringContainsString('Первые 7 дней: 4,90 кг, последние 7 дней: 5,50 кг', $content);
         self::assertStringNotContainsString('нужно не менее 3', mb_strtolower($content));
     }
@@ -319,7 +319,7 @@ final class ReportControllerTest extends DatabaseTestCase
         $content = $this->content($response);
 
         self::assertStringContainsString('<strong>4,80 кг</strong>', $content);
-        self::assertStringContainsString('<strong>0,00 кг</strong>', $content);
+        self::assertStringContainsString('<strong>0 г</strong>', $content);
         self::assertStringContainsString('Первые 7 дней: 4,80 кг, последние 7 дней: 4,80 кг', $content);
         self::assertSame(1, substr_count($content, '1 измерение'));
         self::assertSame(2, substr_count($content, '<strong>42,0 ккал</strong>'));
@@ -342,7 +342,40 @@ final class ReportControllerTest extends DatabaseTestCase
         $content = $this->content($response);
 
         self::assertStringContainsString('Первые 7 дней: 4,00 кг, последние 7 дней: 4,00 кг', $content);
-        self::assertStringContainsString('<strong>+0,01 кг</strong>', $content);
+        self::assertStringContainsString('<strong>+8 г</strong>', $content);
+    }
+
+    public function testWeightChangeShowsNegativeWholeGrams(): void
+    {
+        $weights = new WeightRecordRepository($this->pdo, $this->clock);
+        $weights->save('2026-07-01', 5.60);
+        $weights->save('2026-07-20', 5.54);
+
+        $response = $this->reportController()->report(Request::create(
+            '/report/?period=custom&from=2026-07-01&to=2026-07-20',
+        ));
+        $content = $this->content($response);
+
+        self::assertStringContainsString('<strong>-60 г</strong>', $content);
+        self::assertStringContainsString(
+            'Первые 7 дней: 5,60 кг, последние 7 дней: 5,54 кг',
+            $content,
+        );
+    }
+
+    public function testWeightChangeDeterminesSignAfterRoundingToGrams(): void
+    {
+        $weights = new WeightRecordRepository($this->pdo, $this->clock);
+        $weights->save('2026-07-01', 4.8000);
+        $weights->save('2026-07-20', 4.8004);
+
+        $response = $this->reportController()->report(Request::create(
+            '/report/?period=custom&from=2026-07-01&to=2026-07-20',
+        ));
+        $content = $this->content($response);
+
+        self::assertStringContainsString('<strong>0 г</strong>', $content);
+        self::assertStringNotContainsString('<strong>+0 г</strong>', $content);
     }
 
     public function testRecentCaloriesUseRecordedDaysAndHistoricalSnapshots(): void
@@ -428,7 +461,7 @@ final class ReportControllerTest extends DatabaseTestCase
             array_column($config['weightContextPoints'], 'date'),
         );
         self::assertStringContainsString('<strong>5,00 кг</strong>', $content);
-        self::assertStringContainsString('<strong>+0,50 кг</strong>', $content);
+        self::assertStringContainsString('<strong>+500 г</strong>', $content);
         self::assertStringContainsString('<strong>126,0 ккал</strong>', $content);
         self::assertStringContainsString('<strong>147,0 ккал</strong>', $content);
         self::assertStringNotContainsString('03.07.2026', $content);

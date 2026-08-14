@@ -371,6 +371,7 @@ final readonly class ReportController
         $difference = $first['average'] === null || $last['average'] === null
             ? null
             : $last['average'] - $first['average'];
+        $differenceGrams = $difference === null ? null : (int) round($difference * 1000);
 
         return [
             'first' => [
@@ -395,9 +396,9 @@ final readonly class ReportController
                     'измерений',
                 ),
             ],
-            'change' => $difference === null
+            'change' => $differenceGrams === null
                 ? null
-                : sprintf('%s%s кг', $difference > 0 ? '+' : '', $this->decimal($difference, 2)),
+                : sprintf('%s%d г', $differenceGrams > 0 ? '+' : '', $differenceGrams),
         ];
     }
 

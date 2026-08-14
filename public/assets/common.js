@@ -27,6 +27,7 @@ const chartDateFormatter = new Intl.DateTimeFormat("ru-RU", {
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 const DATE_LABEL_MIN_SPACING = 64;
+const AVERAGE_LABEL_MIN_SPACING = 88;
 const chartStates = new WeakMap();
 let chartId = 0;
 
@@ -80,6 +81,22 @@ function spacedDateLabelTimestamps(fromTimestamp, toTimestamp, weeklyTimestamps,
   });
   selected.push(toTimestamp);
   return selected;
+}
+
+function spacedAverageMarkerTimestamps(markers, xPosition) {
+  const selected = markers.filter((marker) => marker.pinned === true);
+
+  markers.filter((marker) => marker.pinned !== true).forEach((marker) => {
+    const x = xPosition(marker);
+    const hasRoom = selected.every((selectedMarker) =>
+      Math.abs(x - xPosition(selectedMarker)) >= AVERAGE_LABEL_MIN_SPACING
+    );
+    if (hasRoom) {
+      selected.push(marker);
+    }
+  });
+
+  return new Set(selected.map((marker) => marker.timestamp));
 }
 
 export function withCalendarRollingAverage(points, days = 7) {
@@ -234,16 +251,25 @@ function drawHistoryChart(container, state) {
   const margin = { top: 28, right: 18, bottom: 46, left: 58 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
+  const dateRange = normalizedDateRange(options.dateRange);
+  const rangeFromTimestamp = dateRange?.fromTimestamp ?? points[0].timestamp;
+  const rangeToTimestamp = dateRange?.toTimestamp ?? points.at(-1).timestamp;
+  const averageMarkers = showAverage && Array.isArray(options.averageMarkers)
+    ? options.averageMarkers
+      .map((marker) => ({ ...marker, timestamp: chartTimestamp(marker.date) }))
+      .filter((marker) => Number.isFinite(marker.timestamp)
+        && Number.isFinite(marker.value)
+        && marker.timestamp >= rangeFromTimestamp
+        && marker.timestamp <= rangeToTimestamp)
+      .sort((left, right) => left.timestamp - right.timestamp)
+    : [];
   const values = points.flatMap((point) => [
     point.value,
     ...(showAverage && Number.isFinite(point.rollingAverage) ? [point.rollingAverage] : []),
     ...(Number.isFinite(point.lowerBound) ? [point.lowerBound] : []),
     ...(Number.isFinite(point.upperBound) ? [point.upperBound] : [])
-  ]);
+  ]).concat(averageMarkers.map((marker) => marker.value));
   const yScale = chartScale(values, options.nonNegative !== false);
-  const dateRange = normalizedDateRange(options.dateRange);
-  const rangeFromTimestamp = dateRange?.fromTimestamp ?? points[0].timestamp;
-  const rangeToTimestamp = dateRange?.toTimestamp ?? points.at(-1).timestamp;
   let firstTimestamp = rangeFromTimestamp;
   let lastTimestamp = rangeToTimestamp;
   if (firstTimestamp === lastTimestamp) {
@@ -495,6 +521,43 @@ function drawHistoryChart(container, state) {
     pointGroup.append(target);
   });
   svg.append(pointGroup);
+
+  if (averageMarkers.length) {
+    const labelTimestamps = spacedAverageMarkerTimestamps(averageMarkers, xPosition);
+    const markerGroup = createSvgElement("g", {
+      class: "chart-average-markers",
+      "aria-hidden": "true"
+    });
+    averageMarkers.forEach((marker) => {
+      const x = xPosition(marker);
+      const y = yPosition(marker.value);
+      markerGroup.append(createSvgElement("circle", {
+        class: "chart-average-marker",
+        cx: x,
+        cy: y,
+        r: 4,
+        "data-date": marker.date,
+        "data-value": marker.value,
+        "data-pinned": marker.pinned === true ? "true" : "false"
+      }));
+
+      if (!labelTimestamps.has(marker.timestamp)) return;
+
+      const nearLeftEdge = x < margin.left + AVERAGE_LABEL_MIN_SPACING / 2;
+      const nearRightEdge = x > width - margin.right - AVERAGE_LABEL_MIN_SPACING / 2;
+      const nearTopEdge = y < margin.top + 20;
+      markerGroup.append(createSvgElement("text", {
+        class: "chart-average-marker-label",
+        x: nearLeftEdge ? x + 7 : nearRightEdge ? x - 7 : x,
+        y: nearTopEdge ? y + 20 : y - 10,
+        "text-anchor": nearLeftEdge ? "start" : nearRightEdge ? "end" : "middle",
+        "data-date": marker.date,
+        "data-value": marker.value,
+        "data-pinned": marker.pinned === true ? "true" : "false"
+      }, marker.label ?? formatValue(marker.value)));
+    });
+    svg.append(markerGroup);
+  }
   plot.append(svg, tooltip);
 
   const caption = document.createElement("figcaption");

@@ -20,6 +20,9 @@ const calorieFormatter = new Intl.NumberFormat("ru-RU", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1
 });
+const wholeCalorieFormatter = new Intl.NumberFormat("ru-RU", {
+  maximumFractionDigits: 0
+});
 const compactFormatter = new Intl.NumberFormat("ru-RU", {
   maximumFractionDigits: 2
 });
@@ -30,6 +33,10 @@ function formatWeight(value) {
 
 function formatCalories(value) {
   return `${calorieFormatter.format(value)} ккал`;
+}
+
+function formatWholeCalories(value) {
+  return `${wholeCalorieFormatter.format(value)} ккал`;
 }
 
 function formatCount(value, one, few, many) {
@@ -65,6 +72,37 @@ function withContextualRollingAverage(visiblePoints, contextPoints) {
   });
 }
 
+function averageMarkers(points, formatValue) {
+  const eligiblePoints = points
+    .filter((point) => Number.isFinite(point.rollingAverage))
+    .sort((left, right) => left.date.localeCompare(right.date));
+  const markersByDate = new Map();
+
+  eligiblePoints
+    .filter((point) => {
+      const date = new Date(`${point.date}T00:00:00Z`);
+      return date.getUTCDay() === 1;
+    })
+    .forEach((point) => markersByDate.set(point.date, {
+      date: point.date,
+      value: point.rollingAverage,
+      label: formatValue(point.rollingAverage),
+      pinned: false
+    }));
+
+  const lastPoint = eligiblePoints.at(-1);
+  if (lastPoint) {
+    markersByDate.set(lastPoint.date, {
+      date: lastPoint.date,
+      value: lastPoint.rollingAverage,
+      label: formatValue(lastPoint.rollingAverage),
+      pinned: true
+    });
+  }
+
+  return [...markersByDate.values()];
+}
+
 if (weightChart) {
   const weightPoints = withContextualRollingAverage(config.weightPoints, config.weightContextPoints);
   const weightAverageDescription = (point) =>
@@ -76,9 +114,10 @@ if (weightChart) {
     pointLimit: 60,
     dateRange: config.dateRange,
     showWeeklyGrid: true,
+    averageMarkers: averageMarkers(weightPoints, formatWeight),
     emptyMessage: "Нет взвешиваний за выбранный период.",
     ariaLabel: "Динамика веса: фактический вес и семидневное среднее по датам",
-    ariaDescription: "Горизонтальная ось охватывает весь выбранный период, вертикальные линии отмечают понедельники. Точки и бледная линия показывают фактические взвешивания выбранного периода. Основная линия показывает среднее по имеющимся измерениям за предыдущие 7 календарных дней и учитывает до 6 дней перед периодом. Обе линии соединяют соседние точки; пропуски не считаются нулём.",
+    ariaDescription: "Горизонтальная ось охватывает весь выбранный период, вертикальные линии отмечают понедельники. Точки и бледная линия показывают фактические взвешивания выбранного периода. Основная линия показывает среднее по имеющимся измерениям за предыдущие 7 календарных дней и учитывает до 6 дней перед периодом. Зелёные точки и подписи отмечают это среднее в понедельники с фактическим взвешиванием и на последнем фактическом взвешивании. Обе линии соединяют соседние точки; пропуски не считаются нулём.",
     averageLabel: "Среднее за 7 дней",
     seriesLabel: "Фактический вес",
     axisLabel: "кг",
@@ -105,9 +144,10 @@ if (calorieChart) {
     pointLimit: 60,
     dateRange: config.dateRange,
     showWeeklyGrid: true,
+    averageMarkers: averageMarkers(caloriePoints, formatWholeCalories),
     emptyMessage: "Нет записей о кормлении за выбранный период.",
     ariaLabel: "Динамика питания: дневная калорийность и среднее за 7 дней",
-    ariaDescription: "Горизонтальная ось охватывает весь выбранный период, вертикальные линии отмечают понедельники. Точки и бледная линия показывают дневную калорийность выбранного периода. Основная линия показывает среднее по имеющимся записям за предыдущие 7 календарных дней и учитывает до 6 дней перед периодом. Обе линии соединяют соседние точки; пропуски не считаются нулём.",
+    ariaDescription: "Горизонтальная ось охватывает весь выбранный период, вертикальные линии отмечают понедельники. Точки и бледная линия показывают дневную калорийность выбранного периода. Основная линия показывает среднее по имеющимся записям за предыдущие 7 календарных дней и учитывает до 6 дней перед периодом. Зелёные точки и подписи отмечают это среднее в понедельники с фактической записью и на последней фактической записи. Обе линии соединяют соседние точки; пропуски не считаются нулём.",
     averageLabel: "Среднее за 7 дней",
     seriesLabel: "Дневная калорийность",
     axisLabel: "ккал",

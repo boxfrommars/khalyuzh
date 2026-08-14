@@ -26,6 +26,7 @@ const chartDateFormatter = new Intl.DateTimeFormat("ru-RU", {
 });
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+const DATE_LABEL_MIN_SPACING = 64;
 const chartStates = new WeakMap();
 let chartId = 0;
 
@@ -35,6 +36,50 @@ export function formatDate(dateString) {
 
 function chartTimestamp(dateString) {
   return Date.parse(`${dateString}T00:00:00Z`);
+}
+
+function normalizedDateRange(dateRange) {
+  const fromTimestamp = chartTimestamp(dateRange?.from);
+  const toTimestamp = chartTimestamp(dateRange?.to);
+  if (!Number.isFinite(fromTimestamp) || !Number.isFinite(toTimestamp) || fromTimestamp > toTimestamp) {
+    return null;
+  }
+  return { fromTimestamp, toTimestamp };
+}
+
+function isoDate(timestamp) {
+  return new Date(timestamp).toISOString().slice(0, 10);
+}
+
+function calendarMondayTimestamps(fromTimestamp, toTimestamp) {
+  const firstDate = new Date(fromTimestamp);
+  const daysUntilMonday = (8 - firstDate.getUTCDay()) % 7;
+  const timestamps = [];
+  for (
+    let timestamp = fromTimestamp + daysUntilMonday * DAY_IN_MILLISECONDS;
+    timestamp <= toTimestamp;
+    timestamp += 7 * DAY_IN_MILLISECONDS
+  ) {
+    timestamps.push(timestamp);
+  }
+  return timestamps;
+}
+
+function spacedDateLabelTimestamps(fromTimestamp, toTimestamp, weeklyTimestamps, xPosition) {
+  if (fromTimestamp === toTimestamp) return [fromTimestamp];
+
+  const selected = [fromTimestamp];
+  const endX = xPosition({ timestamp: toTimestamp });
+  weeklyTimestamps.forEach((timestamp) => {
+    if (timestamp <= fromTimestamp || timestamp >= toTimestamp) return;
+    const x = xPosition({ timestamp });
+    const previousX = xPosition({ timestamp: selected.at(-1) });
+    if (x - previousX >= DATE_LABEL_MIN_SPACING && endX - x >= DATE_LABEL_MIN_SPACING) {
+      selected.push(timestamp);
+    }
+  });
+  selected.push(toTimestamp);
+  return selected;
 }
 
 export function withCalendarRollingAverage(points, days = 7) {
@@ -196,8 +241,11 @@ function drawHistoryChart(container, state) {
     ...(Number.isFinite(point.upperBound) ? [point.upperBound] : [])
   ]);
   const yScale = chartScale(values, options.nonNegative !== false);
-  let firstTimestamp = points[0].timestamp;
-  let lastTimestamp = points.at(-1).timestamp;
+  const dateRange = normalizedDateRange(options.dateRange);
+  const rangeFromTimestamp = dateRange?.fromTimestamp ?? points[0].timestamp;
+  const rangeToTimestamp = dateRange?.toTimestamp ?? points.at(-1).timestamp;
+  let firstTimestamp = rangeFromTimestamp;
+  let lastTimestamp = rangeToTimestamp;
   if (firstTimestamp === lastTimestamp) {
     firstTimestamp -= DAY_IN_MILLISECONDS / 2;
     lastTimestamp += DAY_IN_MILLISECONDS / 2;
@@ -261,6 +309,24 @@ function drawHistoryChart(container, state) {
     )
   );
 
+  const weeklyTimestamps = options.showWeeklyGrid === true && dateRange
+    ? calendarMondayTimestamps(rangeFromTimestamp, rangeToTimestamp)
+    : [];
+  if (weeklyTimestamps.length) {
+    const weeklyGrid = createSvgElement("g", { class: "chart-week-grid", "aria-hidden": "true" });
+    weeklyTimestamps.forEach((timestamp) => {
+      const x = xPosition({ timestamp });
+      weeklyGrid.append(createSvgElement("line", {
+        x1: x,
+        y1: margin.top,
+        x2: x,
+        y2: height - margin.bottom,
+        "data-date": isoDate(timestamp)
+      }));
+    });
+    svg.append(weeklyGrid);
+  }
+
   const grid = createSvgElement("g", { class: "chart-grid", "aria-hidden": "true" });
   yScale.ticks.forEach((tick) => {
     const y = yPosition(tick);
@@ -291,26 +357,36 @@ function drawHistoryChart(container, state) {
     }, options.axisLabel));
   }
 
-  const dateLabelIndexes = [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])];
+  const dateLabelTimestamps = dateRange && options.showWeeklyGrid === true
+    ? spacedDateLabelTimestamps(
+      rangeFromTimestamp,
+      rangeToTimestamp,
+      weeklyTimestamps,
+      xPosition
+    )
+    : [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])]
+      .map((pointIndex) => points[pointIndex].timestamp);
   const dateLabels = createSvgElement("g", { class: "chart-date-labels", "aria-hidden": "true" });
-  dateLabelIndexes.forEach((pointIndex, labelIndex) => {
-    const point = points[pointIndex];
-    const x = xPosition(point);
-    const textAnchor = dateLabelIndexes.length === 1
+  dateLabelTimestamps.forEach((timestamp, labelIndex) => {
+    const x = xPosition({ timestamp });
+    const date = isoDate(timestamp);
+    const textAnchor = dateLabelTimestamps.length === 1
       ? "middle"
-      : labelIndex === 0 ? "start" : labelIndex === dateLabelIndexes.length - 1 ? "end" : "middle";
+      : labelIndex === 0 ? "start" : labelIndex === dateLabelTimestamps.length - 1 ? "end" : "middle";
     dateLabels.append(
       createSvgElement("line", {
         x1: x,
         y1: height - margin.bottom,
         x2: x,
-        y2: height - margin.bottom + 5
+        y2: height - margin.bottom + 5,
+        "data-date": date
       }),
       createSvgElement("text", {
         x,
         y: height - 16,
-        "text-anchor": textAnchor
-      }, chartDateFormatter.format(new Date(point.timestamp)))
+        "text-anchor": textAnchor,
+        "data-date": date
+      }, chartDateFormatter.format(new Date(timestamp)))
     );
   });
   svg.append(dateLabels);

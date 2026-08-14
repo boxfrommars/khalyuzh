@@ -109,12 +109,10 @@ final readonly class ReportController
         $foodContext = $this->prepareFood($foodContextRecords);
         $weightContext = $this->prepareWeights($weightContextRecords);
         $dailyRecords = $this->combineDailyRecords($food['records'], $weights['records']);
-        $summaryFrom = $error === null ? $period['from'] : $today;
         $summaryTo = $error === null ? $period['to'] : $today;
         $weightSummary = $this->prepareWeightSummary(
             $weights['points'],
             $weightContext['points'],
-            $summaryFrom,
             $summaryTo,
         );
         $recentCalories = $this->prepareRecentCalories($foodContext['points'], $summaryTo);
@@ -133,6 +131,9 @@ final readonly class ReportController
                 'foodContextPoints' => $foodContext['points'],
                 'weightPoints' => $weights['points'],
                 'weightContextPoints' => $weightContext['points'],
+                'dateRange' => $error === null
+                    ? ['from' => $period['from'], 'to' => $period['to']]
+                    : null,
             ]),
             'report_ready' => $error === null,
             'report_error' => $error,
@@ -354,13 +355,18 @@ final readonly class ReportController
     private function prepareWeightSummary(
         array $selectedPoints,
         array $contextPoints,
-        string $periodFrom,
         string $periodTo,
     ): array
     {
-        $firstWindowTo = min($periodTo, $this->shiftDate($periodFrom, self::SUMMARY_WINDOW_DAYS - 1));
+        $firstWindowFrom = $selectedPoints === []
+            ? $periodTo
+            : min(array_column($selectedPoints, 'date'));
+        $firstWindowTo = min(
+            $periodTo,
+            $this->shiftDate($firstWindowFrom, self::SUMMARY_WINDOW_DAYS - 1),
+        );
         $lastWindowFrom = $this->shiftDate($periodTo, -(self::SUMMARY_WINDOW_DAYS - 1));
-        $first = $this->averageInWindow($selectedPoints, $periodFrom, $firstWindowTo);
+        $first = $this->averageInWindow($selectedPoints, $firstWindowFrom, $firstWindowTo);
         $last = $this->averageInWindow($contextPoints, $lastWindowFrom, $periodTo);
         $difference = $first['average'] === null || $last['average'] === null
             ? null

@@ -405,6 +405,13 @@ button:disabled {
   vector-effect: non-scaling-stroke;
 }
 
+.chart-week-grid line {
+  stroke: var(--line);
+  stroke-width: 1;
+  opacity: 0.55;
+  vector-effect: non-scaling-stroke;
+}
+
 .chart-grid text,
 .chart-date-labels text,
 .chart-axis-title {

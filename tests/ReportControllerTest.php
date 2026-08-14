@@ -55,6 +55,67 @@ final class ReportControllerTest extends DatabaseTestCase
         self::assertStringNotContainsString('Динамика фактического веса', $content);
         self::assertStringNotContainsString('<h3 id="calorie-chart-title">Дневная калорийность</h3>', $content);
         self::assertStringNotContainsString('Отчёт содержит только внесённые в дневник данные', $content);
+        $tablePosition = strpos($content, 'id="daily-table-title"');
+        $productsPosition = strpos($content, 'id="products-title"');
+        self::assertNotFalse($tablePosition);
+        self::assertNotFalse($productsPosition);
+        self::assertLessThan(
+            $productsPosition,
+            $tablePosition,
+        );
+    }
+
+    public function testWeightChangeStartsWithFirstMeasurementInsideSelectedPeriod(): void
+    {
+        $food = new FoodRecordRepository($this->pdo, $this->clock, $this->profile);
+        $weights = new WeightRecordRepository($this->pdo, $this->clock);
+        $food->save('2026-06-01', 10, 0);
+        $weights->save('2026-05-31', 9.0);
+        $weights->save('2026-06-10', 4.8);
+        $weights->save('2026-06-16', 5.0);
+        $weights->save('2026-06-17', 8.0);
+        $weights->save('2026-06-25', 5.4);
+        $weights->save('2026-07-01', 5.6);
+        $weights->save('2026-07-02', 9.0);
+
+        $response = $this->reportController()->report(Request::create(
+            '/report/?period=custom&from=2026-06-01&to=2026-07-01',
+        ));
+        $content = $this->content($response);
+        $config = $this->pageConfig($content);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringContainsString('<strong>+0,60 кг</strong>', $content);
+        self::assertStringContainsString(
+            'Первые 7 дней: 4,90 кг, последние 7 дней: 5,50 кг',
+            $content,
+        );
+        self::assertSame(
+            ['from' => '2026-06-01', 'to' => '2026-07-01'],
+            $config['dateRange'],
+        );
+        self::assertStringContainsString('01.06.2026', $content);
+        self::assertStringNotContainsString('31.05.2026', $content);
+        self::assertStringNotContainsString('02.07.2026', $content);
+    }
+
+    public function testLateFirstWeightWindowIsTruncatedAndMayOverlapTrailingWindow(): void
+    {
+        $weights = new WeightRecordRepository($this->pdo, $this->clock);
+        $weights->save('2026-07-08', 4.8);
+        $weights->save('2026-07-10', 5.0);
+
+        $response = $this->reportController()->report(Request::create(
+            '/report/?period=custom&from=2026-07-01&to=2026-07-10',
+        ));
+        $content = $this->content($response);
+
+        self::assertStringContainsString('<strong>4,90 кг</strong>', $content);
+        self::assertStringContainsString('<strong>0,00 кг</strong>', $content);
+        self::assertStringContainsString(
+            'Первые 7 дней: 4,90 кг, последние 7 дней: 4,90 кг',
+            $content,
+        );
     }
 
     public function testReportMarksPrintProfileFieldsWithoutRemovingScreenDetails(): void
@@ -446,7 +507,8 @@ final class ReportControllerTest extends DatabaseTestCase
      *     foodPoints: list<array{date: string, value: float}>,
      *     foodContextPoints: list<array{date: string, value: float}>,
      *     weightPoints: list<array{date: string, value: float}>,
-     *     weightContextPoints: list<array{date: string, value: float}>
+     *     weightContextPoints: list<array{date: string, value: float}>,
+     *     dateRange: array{from: string, to: string}|null
      * }
      */
     private function pageConfig(string $content): array
@@ -464,7 +526,8 @@ final class ReportControllerTest extends DatabaseTestCase
          *     foodPoints: list<array{date: string, value: float}>,
          *     foodContextPoints: list<array{date: string, value: float}>,
          *     weightPoints: list<array{date: string, value: float}>,
-         *     weightContextPoints: list<array{date: string, value: float}>
+         *     weightContextPoints: list<array{date: string, value: float}>,
+         *     dateRange: array{from: string, to: string}|null
          * } $config
          */
         return $config;

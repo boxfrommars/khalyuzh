@@ -116,23 +116,6 @@
           <div class="history-chart report-chart" id="report-calorie-chart"></div>
           <p class="report-note">Среднее учитывает имеющиеся записи за предыдущие 7 календарных дней, включая до 6 дней перед началом периода. Линии соединяют соседние точки; пропуски не считаются нулём.</p>
         </section>
-
-        <section class="report-section report-products-section" aria-labelledby="products-title">
-          <h3 id="products-title">Корма за выбранный период</h3>
-          {% if food_products %}
-            <div class="report-products">
-              {% for product in food_products %}
-                <article class="report-product">
-                  <span>{{ product.type }}</span>
-                  <strong>{{ product.name }}</strong>
-                  <small>{{ product.energy }}</small>
-                </article>
-              {% endfor %}
-            </div>
-          {% else %}
-            <p class="report-empty">В записях нет ненулевых порций корма.</p>
-          {% endif %}
-        </section>
       {% endif %}
 
       <section class="report-section report-table-section" aria-labelledby="daily-table-title">
@@ -169,6 +152,25 @@
           <p class="report-empty">Нет записей о кормлении и взвешиваниях за выбранный период.</p>
         {% endif %}
       </section>
+
+      {% if food_record_count > 0 %}
+        <section class="report-section report-products-section" aria-labelledby="products-title">
+          <h3 id="products-title">Корма за выбранный период</h3>
+          {% if food_products %}
+            <div class="report-products">
+              {% for product in food_products %}
+                <article class="report-product">
+                  <span>{{ product.type }}</span>
+                  <strong>{{ product.name }}</strong>
+                  <small>{{ product.energy }}</small>
+                </article>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="report-empty">В записях нет ненулевых порций корма.</p>
+          {% endif %}
+        </section>
+      {% endif %}
 
     </article>
   {% endif %}

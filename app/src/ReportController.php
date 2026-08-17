@@ -186,7 +186,7 @@ final readonly class ReportController
         array $weightRecords,
         string $today,
     ): array {
-        $key = $query['period'] ?? '90';
+        $key = $query['period'] ?? 'all';
         if (!is_string($key) || !in_array($key, ['30', '90', 'all', 'custom'], true)) {
             throw new InvalidArgumentException('Выберите допустимый период отчёта.');
         }
@@ -212,7 +212,7 @@ final readonly class ReportController
             return [
                 'key' => $key,
                 'from' => $dates === [] ? $today : min($dates),
-                'to' => $today,
+                'to' => $dates === [] ? $today : max($dates),
             ];
         }
 

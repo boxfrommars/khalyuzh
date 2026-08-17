@@ -12,33 +12,44 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class ReportControllerTest extends DatabaseTestCase
 {
-    public function testDefaultReportUsesInclusiveNinetyDayPeriodAndSnapshotCalories(): void
+    public function testDefaultReportUsesCompleteActualHistoryAndSnapshotCalories(): void
     {
         $food = new FoodRecordRepository($this->pdo, $this->clock, $this->profile);
         $weights = new WeightRecordRepository($this->pdo, $this->clock);
         $food->save('2026-04-27', 50, 0);
         $food->save('2026-04-28', 10, 1);
-        $food->save('2026-07-26', 20, 0);
-        $weights->save('2026-04-28', 4.80);
+        $food->save('2026-07-24', 20, 0);
+        $weights->save('2026-04-26', 4.80);
         $weights->save('2026-05-01', 5.00);
         $weights->save('2026-05-04', 5.20);
         $weights->save('2026-07-20', 5.40);
         $weights->save('2026-07-23', 5.60);
-        $weights->save('2026-07-26', 6.20);
 
         $response = $this->reportController()->report(Request::create('/report/'));
         $content = $this->content($response);
+        $config = $this->pageConfig($content);
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+        self::assertStringContainsString(
+            'class="report-period-link selected" href="/report/?period=all"',
+            $content,
+        );
+        self::assertStringContainsString('id="report-from" name="from" type="date" value="2026-04-26"', $content);
+        self::assertStringContainsString('id="report-to" name="to" type="date" value="2026-07-24"', $content);
+        self::assertSame(
+            ['from' => '2026-04-26', 'to' => '2026-07-24'],
+            $config['dateRange'],
+        );
+        self::assertStringContainsString('26.04.2026', $content);
         self::assertStringContainsString('28.04.2026', $content);
-        self::assertStringContainsString('26.07.2026', $content);
-        self::assertStringNotContainsString('27.04.2026', $content);
-        self::assertStringContainsString('113,0 ккал', $content);
+        self::assertStringContainsString('24.07.2026', $content);
+        self::assertStringNotContainsString('26.07.2026', $content);
+        self::assertStringContainsString('145,3 ккал', $content);
         self::assertStringContainsString('Средний вес за последние 7 дней', $content);
-        self::assertStringContainsString('5,73 кг', $content);
-        self::assertStringContainsString('+733 г', $content);
-        self::assertStringContainsString('Первые 7 дней: 5,00 кг, последние 7 дней: 5,73 кг', $content);
+        self::assertStringContainsString('5,50 кг', $content);
+        self::assertStringContainsString('+600 г', $content);
+        self::assertStringContainsString('Первые 7 дней: 4,90 кг, последние 7 дней: 5,50 кг', $content);
         self::assertStringContainsString('Средние калории за последние 7 дней', $content);
         self::assertStringContainsString('<strong>84,0 ккал</strong>', $content);
         self::assertStringContainsString('1 запись', $content);
@@ -46,7 +57,6 @@ final class ReportControllerTest extends DatabaseTestCase
         self::assertStringNotContainsString('Последний фактический вес', $content);
         self::assertStringNotContainsString('Полнота дневника кормления', $content);
         self::assertSame(4, substr_count($content, '<article class="report-metric">'));
-        self::assertStringNotContainsString('5,50 кг', $content);
         self::assertStringNotContainsString('targetMin', $content);
         self::assertStringNotContainsString('targetMax', $content);
         self::assertStringContainsString('10 лет 3 месяца', $content);
@@ -172,12 +182,30 @@ final class ReportControllerTest extends DatabaseTestCase
         self::assertStringNotContainsString('Полнота дневника кормления', $content);
     }
 
-    public function testAllPeriodWithEmptyHistoryProducesOneDayEmptyReport(): void
+    public function testNinetyDayPresetUsesInclusiveCalendarWindow(): void
     {
-        $response = $this->reportController()->report(Request::create('/report/?period=all'));
+        $food = new FoodRecordRepository($this->pdo, $this->clock, $this->profile);
+        $food->save('2026-04-27', 10, 0);
+        $food->save('2026-04-28', 20, 0);
+
+        $response = $this->reportController()->report(Request::create('/report/?period=90'));
         $content = $this->content($response);
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringNotContainsString('27.04.2026', $content);
+        self::assertStringContainsString('28.04.2026', $content);
+    }
+
+    public function testDefaultAllPeriodWithEmptyHistoryProducesOneDayEmptyReport(): void
+    {
+        $response = $this->reportController()->report(Request::create('/report/'));
+        $content = $this->content($response);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertStringContainsString(
+            'class="report-period-link selected" href="/report/?period=all"',
+            $content,
+        );
         self::assertStringContainsString('с 26 июля 2026 по 26 июля 2026', $content);
         self::assertStringContainsString('0 записей', $content);
         self::assertStringNotContainsString('Полнота дневника кормления', $content);
@@ -484,10 +512,14 @@ final class ReportControllerTest extends DatabaseTestCase
         $content = $this->content($response);
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
-        self::assertStringContainsString('с 31 декабря 2025 по 26 июля 2026', $content);
+        self::assertStringContainsString('с 31 декабря 2025 по 15 января 2026', $content);
         self::assertStringContainsString('31.12.2025', $content);
         self::assertStringContainsString('15.01.2026', $content);
         self::assertStringNotContainsString('27.07.2026', $content);
+        self::assertSame(
+            ['from' => '2025-12-31', 'to' => '2026-01-15'],
+            $this->pageConfig($content)['dateRange'],
+        );
     }
 
     #[DataProvider('invalidPeriods')]

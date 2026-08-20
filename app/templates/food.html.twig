@@ -1,15 +1,15 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Рацион Халюжа{% endblock %}
-{% block description %}Дневник калорий для рациона Халюжа{% endblock %}
+{% block title %}Рацион {{ pet.nameGenitive }}{% endblock %}
+{% block description %}Дневник калорий для рациона {{ pet.nameGenitive }}{% endblock %}
 
 {% block content %}
   <section class="card" aria-labelledby="page-title">
     <header class="page-header">
-      <h1 id="page-title">Халюж, как успехи?</h1>
+      <h1 id="page-title">{{ pet.name }}, как успехи?</h1>
       <p class="subtitle">{{ is_admin
         ? 'Запишите рацион за день — данные сохранятся на сервере.'
-        : 'Посчитайте рацион и посмотрите историю Халюжа.' }}</p>
+        : 'Посчитайте рацион и посмотрите историю ' ~ pet.nameGenitive ~ '.' }}</p>
     </header>
 
     <form id="food-form" autocomplete="off" novalidate>

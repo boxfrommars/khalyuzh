@@ -12,10 +12,12 @@ final readonly class PageController
 {
     /**
      * @param array<string, float|int|string> $profile
+     * @param array{name: string, nameGenitive: string} $pet
      */
     public function __construct(
         private Environment $twig,
         private array $profile,
+        private array $pet,
     ) {
     }
 
@@ -27,6 +29,7 @@ final readonly class PageController
         return new Response($this->twig->render('food.html.twig', [
             'is_admin' => $isAdmin,
             'active_section' => 'food',
+            'pet' => $this->pet,
             'page_config' => $this->pageConfig([
                 'isAdmin' => $isAdmin,
                 'apiUrl' => $isAdmin ? '/admin/api.php' : '/api.php',
@@ -48,6 +51,7 @@ final readonly class PageController
         return new Response($this->twig->render('weight.html.twig', [
             'is_admin' => $isAdmin,
             'active_section' => 'weight',
+            'pet' => $this->pet,
             'page_config' => $this->pageConfig([
                 'isAdmin' => $isAdmin,
                 'apiUrl' => $isAdmin ? '/admin/weight/api.php' : '/weight/api.php',

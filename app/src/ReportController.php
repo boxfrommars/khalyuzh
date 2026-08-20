@@ -37,6 +37,7 @@ final readonly class ReportController
     /**
      * @param array{
      *     name: string,
+     *     nameGenitive: string,
      *     species: string,
      *     breed: string,
      *     sex: string,

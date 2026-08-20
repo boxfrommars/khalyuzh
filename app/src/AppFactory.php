@@ -24,6 +24,7 @@ final class AppFactory
      *     timezone: string,
      *     pet: array{
      *         name: string,
+     *         nameGenitive: string,
      *         species: string,
      *         breed: string,
      *         sex: string,
@@ -79,7 +80,11 @@ final class AppFactory
 
     private function pages(): PageController
     {
-        return $this->pages ??= new PageController($this->twig(), $this->config['profile']);
+        return $this->pages ??= new PageController(
+            $this->twig(),
+            $this->config['profile'],
+            $this->config['pet'],
+        );
     }
 
     private function api(): ApiController

@@ -5,6 +5,10 @@
 PHP 8.3 и SQLite, использует Twig, Symfony HttpFoundation и Symfony Clock.
 Frontend-сборки и полноценного PHP-фреймворка нет.
 
+Один и тот же commit можно размещать как несколько независимых экземпляров:
+каждый использует собственные настройки питомца и собственную SQLite. Встроенный
+профиль Халюжа остаётся значением по умолчанию для локальной разработки.
+
 ## Роли документов
 
 - `README.md` — описание приложения и инструкция для разработчика;
@@ -35,8 +39,10 @@ API в production защищаются HTTP Basic Authentication на уровн
 - `app/src/` — классы приложения в namespace `Khalyuzh`: composition root,
   HTTP application, controllers, Database и repositories;
 - `app/templates/` — Twig-layout и страницы;
-- `app/config.php` — путь к БД, часовой пояс, профиль питомца и параметры
-  рациона;
+- `app/config.php` — локальные значения по умолчанию для часового пояса,
+  профиля питомца и параметров рациона;
+- `app/src/ConfigLoader.php` — загрузка и проверка необязательного внешнего
+  instance config;
 - `storage/` — SQLite-база и локальные резервные копии;
 - `bin/migrate.php` — версионированные миграции;
 - `bin/backup.sh` — согласованные SQLite backup-копии;
@@ -129,6 +135,12 @@ docker compose up --build
 по `/report/`,
 административные страницы — по `/admin/` и `/admin/weight/`.
 
+Без дополнительной настройки локальный запуск использует профиль из
+`app/config.php`. Для проверки другого экземпляра можно передать абсолютный путь
+к JSON через `KHALYUZH_CONFIG_FILE`; формат и обязательные инварианты описаны в
+`DEPLOYMENT.md`. Указанный, но отсутствующий или неверный файл завершает запуск
+ошибкой и не подменяется локальными значениями.
+
 При старте development-контейнер применяет миграции к локальной базе и запускает
 встроенный PHP-сервер через `bin/router.php`. Router отдаёт напрямую только
 пять разрешённых asset-файлов, а все HTTP-маршруты передаёт единому front
@@ -213,8 +225,11 @@ composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 `public/` должен оставаться единственным document root. Nginx должен исполнять
 только `public/index.php`, отдавать напрямую только известные assets и защищать
-весь `/admin/` через HTTP Basic Authentication. Пример конфигурации находится
-в `deploy/nginx.example.conf`. Полный
+весь `/admin/` через HTTP Basic Authentication. Каждый production-экземпляр
+передаёт собственный `KHALYUZH_CONFIG_FILE`; путь к SQLite при этом всегда
+остаётся `storage/records.sqlite` внутри соответствующего checkout и не может
+быть переопределён JSON. Пример Nginx-конфигурации находится в
+`deploy/nginx.example.conf`. Полный
 deployment-контракт, порядок миграции и rollback описаны в `DEPLOYMENT.md`;
 production-инфраструктура, выполнение deploy и серверные runbooks находятся за
 пределами ответственности этого репозитория.

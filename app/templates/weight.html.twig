@@ -1,15 +1,15 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Вес Халюжа{% endblock %}
-{% block description %}Дневник веса Халюжа{% endblock %}
+{% block title %}Вес {{ pet.nameGenitive }}{% endblock %}
+{% block description %}Дневник веса {{ pet.nameGenitive }}{% endblock %}
 
 {% block content %}
   <section class="card" aria-labelledby="page-title">
     <header class="page-header">
-      <h1 id="page-title">Халюж, сколько вешаем?</h1>
+      <h1 id="page-title">{{ pet.name }}, сколько вешаем?</h1>
       <p class="subtitle">{{ is_admin
         ? 'Запишите сегодняшнее взвешивание или исправьте прошлую запись.'
-        : 'Последнее взвешивание и динамика веса Халюжа.' }}</p>
+        : 'Последнее взвешивание и динамика веса ' ~ pet.nameGenitive ~ '.' }}</p>
     </header>
 
     {% if is_admin %}

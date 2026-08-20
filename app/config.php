@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'databasePath' => dirname(__DIR__) . '/storage/records.sqlite',
     'timezone' => 'Asia/Yerevan',
     'pet' => [
         'name' => 'Халюж',
+        'nameGenitive' => 'Халюжа',
         'species' => 'Домашняя кошка',
         'breed' => 'Метис',
         'sex' => 'Самец',

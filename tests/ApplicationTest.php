@@ -7,8 +7,10 @@ namespace Khalyuzh\Tests;
 use Khalyuzh\ApiController;
 use Khalyuzh\AppFactory;
 use Khalyuzh\Application;
+use Khalyuzh\FoodRecordRepository;
 use Khalyuzh\PageController;
 use Khalyuzh\ReportController;
+use Khalyuzh\WeightRecordRepository;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -200,9 +202,46 @@ final class ApplicationTest extends DatabaseTestCase
         }
     }
 
-    private function application(): Application
+    public function testConfiguredPetNameFormsAreRendered(): void
+    {
+        $pet = [
+            ...$this->pet,
+            'name' => 'Милкинс',
+            'nameGenitive' => 'Милкинса',
+        ];
+
+        $food = $this->application($pet)->handle(Request::create('/'))->getContent();
+        $weight = $this->application($pet)->handle(Request::create('/weight/'))->getContent();
+        $report = $this->application($pet)->handle(Request::create('/report/'))->getContent();
+
+        self::assertNotFalse($food);
+        self::assertNotFalse($weight);
+        self::assertNotFalse($report);
+        self::assertStringContainsString('Рацион Милкинса', $food);
+        self::assertStringContainsString('Милкинс, как успехи?', $food);
+        self::assertStringContainsString('Вес Милкинса', $weight);
+        self::assertStringContainsString('Милкинс, сколько вешаем?', $weight);
+        self::assertStringContainsString('Дневник Милкинса', $report);
+        self::assertStringContainsString('<dd>Милкинс</dd>', $report);
+    }
+
+    /**
+     * @param array{
+     *     name: string,
+     *     nameGenitive: string,
+     *     species: string,
+     *     breed: string,
+     *     sex: string,
+     *     reproductiveStatus: string,
+     *     diagnosis: string,
+     *     coatColor: string,
+     *     birthDate: string
+     * }|null $pet
+     */
+    private function application(?array $pet = null): Application
     {
         $api = $this->apiController();
+        $pet ??= $this->pet;
 
         return new Application(
             new PageController(
@@ -215,9 +254,24 @@ final class ApplicationTest extends DatabaseTestCase
                     ],
                 ),
                 $this->profile,
+                $pet,
             ),
             static fn (): ApiController => $api,
-            fn (): ReportController => $this->reportController(),
+            fn (): ReportController => new ReportController(
+                new Environment(
+                    new FilesystemLoader(dirname(__DIR__) . '/app/templates'),
+                    [
+                        'autoescape' => 'html',
+                        'cache' => false,
+                        'strict_variables' => true,
+                    ],
+                ),
+                new FoodRecordRepository($this->pdo, $this->clock, $this->profile),
+                new WeightRecordRepository($this->pdo, $this->clock),
+                $this->clock,
+                'Asia/Yerevan',
+                $pet,
+            ),
         );
     }
 }

@@ -44,6 +44,7 @@ abstract class DatabaseTestCase extends TestCase
     /**
      * @var array{
      *     name: string,
+     *     nameGenitive: string,
      *     species: string,
      *     breed: string,
      *     sex: string,
@@ -55,6 +56,7 @@ abstract class DatabaseTestCase extends TestCase
      */
     protected array $pet = [
         'name' => 'Халюж',
+        'nameGenitive' => 'Халюжа',
         'species' => 'Домашняя кошка',
         'breed' => 'Метис',
         'sex' => 'Самец',

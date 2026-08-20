@@ -1,7 +1,7 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}{{ report_title }}{% endblock %}
-{% block description %}Отчёт о кормлении и весе Халюжа для ветеринара{% endblock %}
+{% block description %}Отчёт о кормлении и весе {{ pet.nameGenitive }} для ветеринара{% endblock %}
 
 {% block content %}
   <section class="card report-controls" aria-labelledby="report-controls-title">
@@ -52,7 +52,7 @@
     <article class="card report-document" aria-labelledby="report-title">
       <header class="report-document-header">
         <div>
-          <p class="eyebrow">Дневник Халюжа</p>
+          <p class="eyebrow">Дневник {{ pet.nameGenitive }}</p>
           <h2 id="report-title">Кормление и фактический вес</h2>
           <p class="report-period">{{ period_display }}</p>
         </div>

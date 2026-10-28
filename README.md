@@ -147,12 +147,35 @@ docker compose up --build
 controller. Admin разрешён без пароля только при `PHP_SAPI=cli-server`; это
 исключение нельзя использовать в production.
 
+## Обновление зависимостей
+
+Зависимости обновляются через Composer в Docker с сохранением PHP 8.3 и
+ограничений из `composer.json`. Выполнять из корня репозитория:
+
+```sh
+docker compose build app
+docker compose run --rm --no-deps \
+  --volume ./composer.json:/app/composer.json:ro \
+  --volume ./composer.lock:/app/composer.lock \
+  --volume /app/storage \
+  app composer update --no-install --no-interaction --prefer-dist
+docker compose build app
+```
+
+Compose обычно не монтирует `composer.json` и `composer.lock`, поэтому для
+обновления они подключаются явно. Новый lock-файл сохраняется в рабочем
+каталоге, а повторная сборка устанавливает зафиксированные версии в образ.
+После обновления выполнить проверки ниже и проверить diff `composer.lock`.
+
 ## Проверки
 
 ```sh
-docker compose run --rm app composer validate --strict
-docker compose run --rm app composer check
-docker compose run --rm app sh -c \
+docker compose build app
+docker compose run --rm --no-deps --volume /app/storage app composer validate --strict
+docker compose run --rm --no-deps --volume /app/storage app composer check
+docker compose run --rm --no-deps --volume /app/storage app composer audit --locked
+docker compose run --rm --no-deps --volume /app/storage app composer check-platform-reqs
+docker compose run --rm --no-deps --volume /app/storage app sh -c \
   "find app public bin tests -type f -name '*.php' -exec php -l {} \; && \
    php -r 'exit(extension_loaded(\"PDO\") && extension_loaded(\"pdo_sqlite\") ? 0 : 1);' && \
    sh -n bin/backup.sh && sh -n bin/start-dev.sh"
@@ -160,6 +183,13 @@ docker compose run --rm app sh -c \
 
 `composer check` запускает PHPUnit и PHPStan level 8. Тесты создают только
 in-memory SQLite и не обращаются к `storage/records.sqlite`.
+
+В командах обновления и проверки `--volume /app/storage` подменяет локальное
+хранилище временным Docker volume, удаляемым вместе с контейнером. Явная команда
+после `app` заменяет startup-скрипт: миграции постоянной базы не запускаются.
+`composer audit --locked` проверяет известные уязвимости во всех зафиксированных
+зависимостях, включая dev-пакеты; `composer check-platform-reqs` проверяет
+фактическую версию PHP и расширения контейнера.
 
 ## API
 

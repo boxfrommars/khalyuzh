@@ -220,6 +220,8 @@ API веса:
 ```shell
 composer validate --strict
 composer check
+composer audit --locked
+composer check-platform-reqs
 find app public bin tests -type f -name '*.php' -exec php -l {} \;
 php -r 'exit(extension_loaded("PDO") && extension_loaded("pdo_sqlite") ? 0 : 1);'
 sh -n bin/backup.sh
@@ -228,6 +230,20 @@ sh -n bin/start-dev.sh
 
 PHPUnit использует только временную или in-memory SQLite. Проверки не должны
 читать или изменять production-базу.
+
+`composer audit --locked` проверяет runtime- и dev-зависимости; известных
+уязвимостей быть не должно. На отдельном чистом checkout или в build-контейнере
+также проверить установку production-зависимостей из lock-файла:
+
+```shell
+composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+composer check-platform-reqs --no-dev
+```
+
+Эти команды выполняются до активации версии и без startup-скрипта или миграций
+постоянной базы. При обновлении зависимостей PHP 8.3 и ограничения
+`composer.json` сохраняются; порядок обновления через Docker описан в
+`README.md`.
 
 После размещения выполнить read-only smoke-сценарии, проверить HTTPS,
 редиректы, Basic Auth, ожидаемые `404`, отсутствие PHP/JavaScript-ошибок и

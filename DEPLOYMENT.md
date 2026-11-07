@@ -34,6 +34,8 @@ production-пути, пользователей ОС, секреты, серти
 - Требуемые возможности runtime:
   PHP 8.3 с `PDO` и `pdo_sqlite`; для backup также нужен `sqlite3` CLI.
 - Twig, Symfony HttpFoundation и Symfony Clock устанавливаются Composer.
+- Symfony HttpFoundation в ветке 7.4 должен быть не ниже 7.4.23: этот релиз
+  включает [исправления безопасности от 4 ноября 2026 года](https://github.com/symfony/http-foundation/releases/tag/v7.4.23).
 - PHPUnit и PHPStan являются dev-зависимостями и в production не
   устанавливаются.
 - Административные маршруты защищаются HTTP Basic Authentication на уровне

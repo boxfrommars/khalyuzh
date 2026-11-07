@@ -134,16 +134,16 @@
         },
         {
             "name": "symfony/deprecation-contracts",
-            "version": "v3.7.1",
+            "version": "v3.8.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/deprecation-contracts.git",
-                "reference": "f3202fa1b5097b0af062dc978b32ecf63404e31d"
+                "reference": "feb1edf4e546af3b85c5caebe8359a20db230ca3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/f3202fa1b5097b0af062dc978b32ecf63404e31d",
-                "reference": "f3202fa1b5097b0af062dc978b32ecf63404e31d",
+                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/feb1edf4e546af3b85c5caebe8359a20db230ca3",
+                "reference": "feb1edf4e546af3b85c5caebe8359a20db230ca3",
                 "shasum": ""
             },
             "require": {
@@ -156,7 +156,7 @@
                     "name": "symfony/contracts"
                 },
                 "branch-alias": {
-                    "dev-main": "3.7-dev"
+                    "dev-main": "3.8-dev"
                 }
             },
             "autoload": {
@@ -181,7 +181,7 @@
             "description": "A generic function and convention to trigger deprecation notices",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/deprecation-contracts/tree/v3.7.1"
+                "source": "https://github.com/symfony/deprecation-contracts/tree/v3.8.1"
             },
             "funding": [
                 {
@@ -201,20 +201,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-06-05T06:23:12+00:00"
+            "time": "2026-09-16T14:15:10+00:00"
         },
         {
             "name": "symfony/http-foundation",
-            "version": "v7.4.22",
+            "version": "v7.4.23",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/http-foundation.git",
-                "reference": "63eda1d0c4de229d6b3e825709e49dd5c149699a"
+                "reference": "7fb73cffa06e2bcc2cb523fcccb1e8174106b206"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/http-foundation/zipball/63eda1d0c4de229d6b3e825709e49dd5c149699a",
-                "reference": "63eda1d0c4de229d6b3e825709e49dd5c149699a",
+                "url": "https://api.github.com/repos/symfony/http-foundation/zipball/7fb73cffa06e2bcc2cb523fcccb1e8174106b206",
+                "reference": "7fb73cffa06e2bcc2cb523fcccb1e8174106b206",
                 "shasum": ""
             },
             "require": {
@@ -263,7 +263,7 @@
             "description": "Defines an object-oriented layer for the HTTP specification",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/http-foundation/tree/v7.4.22"
+                "source": "https://github.com/symfony/http-foundation/tree/v7.4.23"
             },
             "funding": [
                 {
@@ -283,7 +283,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-27T13:26:03+00:00"
+            "time": "2026-11-04T08:27:22+00:00"
         },
         {
             "name": "symfony/polyfill-ctype",
@@ -852,11 +852,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.3.3",
+            "version": "2.3.5",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/4b57dc8ca7456b635d1661845f44bc060b02c6b0",
-                "reference": "4b57dc8ca7456b635d1661845f44bc060b02c6b0",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/645a1bd6bead15fc1b8474137467961d0fa30a79",
+                "reference": "645a1bd6bead15fc1b8474137467961d0fa30a79",
                 "shasum": ""
             },
             "require": {
@@ -912,7 +912,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-27T14:06:26+00:00"
+            "time": "2026-11-03T12:14:22+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -1273,16 +1273,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "12.5.42",
+            "version": "12.5.43",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "1d6dbe748c079e5d2b03bca1be69d0f4cc52a578"
+                "reference": "1d5a4a3c98fa1ca3a51402c74b66c2c8df85e0bb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/1d6dbe748c079e5d2b03bca1be69d0f4cc52a578",
-                "reference": "1d6dbe748c079e5d2b03bca1be69d0f4cc52a578",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/1d5a4a3c98fa1ca3a51402c74b66c2c8df85e0bb",
+                "reference": "1d5a4a3c98fa1ca3a51402c74b66c2c8df85e0bb",
                 "shasum": ""
             },
             "require": {
@@ -1351,7 +1351,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/12.5.42"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/12.5.43"
             },
             "funding": [
                 {
@@ -1359,7 +1359,7 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-10-27T04:15:03+00:00"
+            "time": "2026-11-02T07:10:00+00:00"
         },
         {
             "name": "sebastian/cli-parser",
